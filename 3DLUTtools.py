@@ -14,10 +14,39 @@ from kivy.properties import ObjectProperty
 
 import os
 import csv
+from mpl_toolkits.mplot3d import axes3d
+import matplotlib.pyplot as plt
+from matplotlib import cm
 import numpy as np
 
 # AxisList = ["Red", "Green", "Blue"]
 AxisList = ["Blue", "Green", "Red"] #Because of the reshape, the axis is different from lut doc
+AxisPlotDic = {"Red" : 0, "Green" : 1, "Blue" : 2}
+class Draw3DSurface(object):
+    def __init__(self, step=0.030304):
+        # self.lut_table = np.zeros((33, 33, 33, 3), dtype = np.float)
+        self.X = np.arange(0, 1, step)
+        self.Y = np.arange(0, 1, step)
+        self.X, self.Y = np.meshgrid(self.X, self.Y)
+    def plot(self, Z , plot_axis):
+        fig = plt.figure()
+
+        ax = fig.gca(projection='3d')
+        ax.plot_surface(self.X, self.Y, Z, rstride=1, cstride=1, alpha=0.3)
+        cset = ax.contour(self.X, self.Y, Z, zdir='z', cmap=cm.coolwarm)
+        cset = ax.contour(self.X, self.Y, Z, zdir='x', cmap=cm.coolwarm)
+        cset = ax.contour(self.X, self.Y, Z, zdir='y', cmap=cm.coolwarm)
+
+        # plt.subplot(221)
+
+        ax.set_xlabel('X')
+        ax.set_xlim(0, 1)
+        ax.set_ylabel('Y')
+        ax.set_ylim(0, 1)
+        ax.set_zlabel(plot_axis)
+        ax.set_zlim(0, 1)
+
+        plt.show()
 
 class LoadDialog(FloatLayout):
     load = ObjectProperty(None)
@@ -135,6 +164,7 @@ class LUTtoolsApp(App):
                     Color(lut_layer[i,0], lut_layer[i,1], lut_layer[i,2])
                     Rectangle(pos=(x * 35 + wid.x + 20,
                                    y * 20 + wid.y + 20), size=(10, 15))
+
             if self.fileroot.lut_data2.is_empty() == False:
                 lut_layer = self.fileroot.lut_data2.get_lut_layer(self.axis, self.layer_index)
                 # print lut_layer.shape
@@ -160,8 +190,11 @@ class LUTtoolsApp(App):
         self.update_label()
         self.show_lut_layer(wid)
 
-    def double_rects(self, wid, *largs):
-        pass
+    def show_3D_plot(self, wid, *largs):
+        lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
+        for key, value in AxisPlotDic.iteritems():
+            if key != AxisList[self.axis]:
+                self.plot3d.plot(lut_layer[:,:,value], key)
 
     def reset_rects(self, wid, *largs):
         pass
@@ -184,6 +217,7 @@ class LUTtoolsApp(App):
         self.axis = 2
         self.layer_index = 0
         self.load_file = 0
+        self.plot3d = Draw3DSurface()
         upper_layout = BoxLayout()
         upper_layout.add_widget(wid)
         upper_layout.add_widget(slider)
@@ -196,8 +230,11 @@ class LUTtoolsApp(App):
         btn_load_lut2 = Button(text='Load LUT 2',
                             on_press=partial(self.load_lut, wid, 2))
 
-        btn_add500 = Button(text='Show LUT Layer',
+        btn_showlayer = Button(text='Show LUT Layer',
                             on_press=partial(self.show_lut_layer, wid))
+
+        btn_showplot = Button(text='Show 3D Plot',
+                            on_press=partial(self.show_3D_plot, wid))
 
         btn_double = Button(text='Change Axis',
                             on_press=partial(self.change_axis, wid))
@@ -208,7 +245,8 @@ class LUTtoolsApp(App):
         layout = BoxLayout(size_hint=(1, None), height=50)
         layout.add_widget(btn_load_lut1)
         layout.add_widget(btn_load_lut2)
-        layout.add_widget(btn_add500)
+        layout.add_widget(btn_showlayer)
+        layout.add_widget(btn_showplot)
         layout.add_widget(btn_double)
         layout.add_widget(btn_reset)
         layout.add_widget(self.label)
