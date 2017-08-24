@@ -31,10 +31,17 @@ class SaveDialog(FloatLayout):
 
 class LUTData(object):
     def __init__(self):
-        self.lut_table = np.zeros((33, 33, 33, 3), dtype = np.float)
+        # self.lut_table = np.zeros((33, 33, 33, 3), dtype = np.float)
+        self.lut_table = None
 
     def set_lut(self, lut):
         self.lut_table = lut
+
+    def is_empty(self):
+        if self.lut_table == None:
+            return True
+        else:
+            return False
 
     def get_lut_layer(self, axis=0, index=0):
         if axis == 0:
@@ -48,8 +55,9 @@ class Root(FloatLayout):
     loadfile = ObjectProperty(None)
     savefile = ObjectProperty(None)
     text_input = ObjectProperty(None)
-    lut_data = LUTData()
-
+    lut_data1 = LUTData()
+    lut_data2 = LUTData()
+    file_index = 1
 
     def readLUT(self, path, filename):
         with open(os.path.join(path, filename[0]), 'rb') as lutfile:
@@ -67,6 +75,9 @@ class Root(FloatLayout):
             LUT_table = LUT_table.reshape((33, 33, 33, 3))
         return LUT_table
 
+    def set_file_index(self, index):
+        self.file_index = index
+
     def dismiss_popup(self):
         self._popup.dismiss()
 
@@ -83,12 +94,12 @@ class Root(FloatLayout):
         self._popup.open()
 
     def load(self, path, filename):
-        # with open(os.path.join(path, filename[0])) as stream:
-        #     # self.text_input.text = stream.read()
-        #     print filename[0]
         print (path, filename)
         lut = self.readLUT(path, filename)
-        self.lut_data.set_lut(lut)
+        if self.file_index == 1:
+            self.lut_data1.set_lut(lut)
+        else:
+            self.lut_data2.set_lut(lut)
 
         self.dismiss_popup()
 
@@ -113,18 +124,35 @@ class LUTtoolsApp(App):
 
     def show_lut_layer(self, wid, *largs):
         with wid.canvas:
-            lut_layer = self.fileroot.lut_data.get_lut_layer(self.axis, self.layer_index)
-            # print lut_layer.shape
-            lut_layer = np.reshape(lut_layer, (-1,3))
-            # print lut_layer.shape
-            for i in range(lut_layer.shape[0]):
-                x = i % 33
-                y = i / 33
-                Color(lut_layer[i,0], lut_layer[i,1], lut_layer[i,2])
-                Rectangle(pos=(x * 20 + wid.x + 20,
-                               y * 20 + wid.y + 20), size=(15, 15))
+            if self.fileroot.lut_data1.is_empty() == False:
+                lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
+                # print lut_layer.shape
+                lut_layer = np.reshape(lut_layer, (-1,3))
+                # print lut_layer.shape
+                for i in range(lut_layer.shape[0]):
+                    x = i % 33
+                    y = i / 33
+                    Color(lut_layer[i,0], lut_layer[i,1], lut_layer[i,2])
+                    Rectangle(pos=(x * 35 + wid.x + 20,
+                                   y * 20 + wid.y + 20), size=(10, 15))
+            if self.fileroot.lut_data2.is_empty() == False:
+                lut_layer = self.fileroot.lut_data2.get_lut_layer(self.axis, self.layer_index)
+                # print lut_layer.shape
+                lut_layer = np.reshape(lut_layer, (-1,3))
+                # print lut_layer.shape
+                for i in range(lut_layer.shape[0]):
+                    x = i % 33
+                    y = i / 33
+                    Color(lut_layer[i,0], lut_layer[i,1], lut_layer[i,2])
+                    Rectangle(pos=(x * 35 + wid.x + 32,
+                                   y * 20 + wid.y + 20), size=(10, 15))
 
-    def load_lut(self, wid, *largs):
+    def load_lut(self, wid, file_index, *largs):
+        if file_index == 1:
+            load_file = 1
+        else:
+            load_file = 2
+        self.fileroot.set_file_index(load_file)
         self.fileroot.show_load()
 
     def change_axis(self, wid, *largs):
@@ -155,14 +183,18 @@ class LUTtoolsApp(App):
         self.fileroot = Root()
         self.axis = 2
         self.layer_index = 0
+        self.load_file = 0
         upper_layout = BoxLayout()
         upper_layout.add_widget(wid)
         upper_layout.add_widget(slider)
 
         self.label = Label(text=self.label_pattern.format(AxisList[self.axis], 0))
 
-        btn_add100 = Button(text='Load LUT',
-                            on_press=partial(self.load_lut, wid))
+        btn_load_lut1 = Button(text='Load LUT 1',
+                            on_press=partial(self.load_lut, wid, 1))
+
+        btn_load_lut2 = Button(text='Load LUT 2',
+                            on_press=partial(self.load_lut, wid, 2))
 
         btn_add500 = Button(text='Show LUT Layer',
                             on_press=partial(self.show_lut_layer, wid))
@@ -174,7 +206,8 @@ class LUTtoolsApp(App):
                            on_press=partial(self.reset_rects, wid))
 
         layout = BoxLayout(size_hint=(1, None), height=50)
-        layout.add_widget(btn_add100)
+        layout.add_widget(btn_load_lut1)
+        layout.add_widget(btn_load_lut2)
         layout.add_widget(btn_add500)
         layout.add_widget(btn_double)
         layout.add_widget(btn_reset)
