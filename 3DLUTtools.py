@@ -11,6 +11,8 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.popup import Popup
 from kivy.factory import Factory
 from kivy.properties import ObjectProperty
+from kivy.uix.tabbedpanel import TabbedPanel
+from kivy.uix.tabbedpanel import TabbedPanelHeader
 
 import os
 import csv
@@ -263,6 +265,9 @@ class LUTtoolsApp(App):
         self.label.text = self.label_pattern.format(AxisList[self.axis], self.layer_index)
 
     def build(self):
+        tp = TabbedPanel()
+        th_text_head = TabbedPanelHeader(text='Edit')
+        th_text_head.content= Label(text='This is my text content')
         wid = Widget(size_hint=(0.95, 1))
         slider = Slider(min=0, max=32, value=0, value_track=True, orientation='vertical',
         step=1.0, value_track_color=[1, 0, 0, 1], size_hint=(0.2, 1))
@@ -309,8 +314,12 @@ class LUTtoolsApp(App):
         root.add_widget(upper_layout)
         root.add_widget(layout)
         slider.bind(value=partial(self.OnSliderValueChange, wid))
+        tp.default_tab_text = "Analysis"
+        tp.background_color = (0,0,0,1)
+        tp.default_tab_content = root
+        tp.add_widget(th_text_head)
 
-        return root
+        return tp
 
 Factory.register('Root', cls=Root)
 Factory.register('LoadDialog', cls=LoadDialog)
