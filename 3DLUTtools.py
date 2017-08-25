@@ -28,25 +28,63 @@ class Draw3DSurface(object):
         self.X = np.arange(0, 1, step)
         self.Y = np.arange(0, 1, step)
         self.X, self.Y = np.meshgrid(self.X, self.Y)
-    def plot(self, Z , plot_axis):
-        fig = plt.figure()
+    def plot(self, Z1, Z2, plot_axis):
+        if Z1 != None and Z2 != None:
+            fig = plt.figure(figsize=plt.figaspect(0.5))
+            ax = fig.add_subplot(1, 2, 1, projection='3d')
+            ax.plot_surface(self.X, self.Y, Z1, rstride=1, cstride=1, alpha=0.3)
+            cset = ax.contour(self.X, self.Y, Z1, zdir='z', cmap=cm.coolwarm)
+            cset = ax.contour(self.X, self.Y, Z1, zdir='x', cmap=cm.coolwarm)
+            cset = ax.contour(self.X, self.Y, Z1, zdir='y', cmap=cm.coolwarm)
+            ax.set_xlabel('X')
+            ax.set_xlim(0, 1)
+            ax.set_ylabel('Y')
+            ax.set_ylim(0, 1)
+            ax.set_zlabel(plot_axis)
+            ax.set_zlim(0, 1)
 
-        ax = fig.gca(projection='3d')
-        ax.plot_surface(self.X, self.Y, Z, rstride=1, cstride=1, alpha=0.3)
-        cset = ax.contour(self.X, self.Y, Z, zdir='z', cmap=cm.coolwarm)
-        cset = ax.contour(self.X, self.Y, Z, zdir='x', cmap=cm.coolwarm)
-        cset = ax.contour(self.X, self.Y, Z, zdir='y', cmap=cm.coolwarm)
+            ax = fig.add_subplot(1, 2, 2, projection='3d')
+            ax.plot_surface(self.X, self.Y, Z2, rstride=1, cstride=1, alpha=0.3)
+            cset = ax.contour(self.X, self.Y, Z2, zdir='z', cmap=cm.coolwarm)
+            cset = ax.contour(self.X, self.Y, Z2, zdir='x', cmap=cm.coolwarm)
+            cset = ax.contour(self.X, self.Y, Z2, zdir='y', cmap=cm.coolwarm)
+            ax.set_xlabel('X')
+            ax.set_xlim(0, 1)
+            ax.set_ylabel('Y')
+            ax.set_ylim(0, 1)
+            ax.set_zlabel(plot_axis)
+            ax.set_zlim(0, 1)
 
-        # plt.subplot(221)
+            plt.show()
+        elif Z1 != None:
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            ax.plot_surface(self.X, self.Y, Z1, rstride=1, cstride=1, alpha=0.3)
+            cset = ax.contour(self.X, self.Y, Z1, zdir='z', cmap=cm.coolwarm)
+            cset = ax.contour(self.X, self.Y, Z1, zdir='x', cmap=cm.coolwarm)
+            cset = ax.contour(self.X, self.Y, Z1, zdir='y', cmap=cm.coolwarm)
+            ax.set_xlabel('X')
+            ax.set_xlim(0, 1)
+            ax.set_ylabel('Y')
+            ax.set_ylim(0, 1)
+            ax.set_zlabel(plot_axis)
+            ax.set_zlim(0, 1)
+            plt.show()
+        elif Z2 != None:
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            ax.plot_surface(self.X, self.Y, Z2, rstride=1, cstride=1, alpha=0.3)
+            cset = ax.contour(self.X, self.Y, Z2, zdir='z', cmap=cm.coolwarm)
+            cset = ax.contour(self.X, self.Y, Z2, zdir='x', cmap=cm.coolwarm)
+            cset = ax.contour(self.X, self.Y, Z2, zdir='y', cmap=cm.coolwarm)
+            ax.set_xlabel('X')
+            ax.set_xlim(0, 1)
+            ax.set_ylabel('Y')
+            ax.set_ylim(0, 1)
+            ax.set_zlabel(plot_axis)
+            ax.set_zlim(0, 1)
+            plt.show()
 
-        ax.set_xlabel('X')
-        ax.set_xlim(0, 1)
-        ax.set_ylabel('Y')
-        ax.set_ylim(0, 1)
-        ax.set_zlabel(plot_axis)
-        ax.set_zlim(0, 1)
-
-        plt.show()
 
 class LoadDialog(FloatLayout):
     load = ObjectProperty(None)
@@ -191,10 +229,26 @@ class LUTtoolsApp(App):
         self.show_lut_layer(wid)
 
     def show_3D_plot(self, wid, *largs):
-        lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
+        lut_layer_1 = None
+        lut_layer_2 = None
+        plot_type = 0
+        if self.fileroot.lut_data1.is_empty() != True:
+            lut_layer_1 = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
+            plot_type |= 0b01
+        if self.fileroot.lut_data2.is_empty() != True:
+            lut_layer_2 = self.fileroot.lut_data2.get_lut_layer(self.axis, self.layer_index)
+            plot_type |= 0b10
         for key, value in AxisPlotDic.iteritems():
             if key != AxisList[self.axis]:
-                self.plot3d.plot(lut_layer[:,:,value], key)
+                if plot_type == 0:
+                    pass
+                elif plot_type == 1:
+                    self.plot3d.plot(lut_layer_1[:,:,value], None, key)
+                elif plot_type == 2:
+                    self.plot3d.plot(None, lut_layer_2[:,:,value], key)
+                elif plot_type == 3:
+                    self.plot3d.plot(lut_layer_1[:,:,value], lut_layer_2[:,:,value], key)
+                # self.plot3d.plot(lut_layer[:,:,value], key)
 
     def reset_rects(self, wid, *largs):
         pass
