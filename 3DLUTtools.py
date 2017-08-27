@@ -273,7 +273,19 @@ class LUTtoolsApp(App):
     def show_lut_layer(self, wid, *largs):
         with wid.canvas:
             wid.canvas.clear()
-            if self.fileroot.lut_data1.is_empty() == False:
+            # if self.fileroot.lut_data1.is_empty() == False:
+            #     # self.update_edit_panel()
+            #     lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
+            #     # print lut_layer.shape
+            #     lut_layer = np.reshape(lut_layer, (-1,3))
+            #     # print lut_layer.shape
+            #     for i in range(lut_layer.shape[0]):
+            #         x = i % 33
+            #         y = i / 33
+            #         Color(lut_layer[i,0], lut_layer[i,1], lut_layer[i,2])
+            #         Rectangle(pos=(x * 25 + wid.x + 20,
+            #                        y * 18 + wid.y + 20), size=(10, 10))
+            if self.fileroot.lut_data1.is_empty() == False and self.fileroot.lut_data2.is_empty() == True:
                 # self.update_edit_panel()
                 lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
                 # print lut_layer.shape
@@ -283,10 +295,20 @@ class LUTtoolsApp(App):
                     x = i % 33
                     y = i / 33
                     Color(lut_layer[i,0], lut_layer[i,1], lut_layer[i,2])
-                    Rectangle(pos=(x * 25 + wid.x + 20,
-                                   y * 18 + wid.y + 20), size=(10, 10))
+                    Rectangle(pos=(x * wid.width / 33.0 + wid.x + 15,
+                                   y * wid.height / 34.0 + wid.y + 15), size=(wid.width / 35.0 , wid.height / 35.0))
 
-            if self.fileroot.lut_data2.is_empty() == False:
+            if self.fileroot.lut_data1.is_empty() == False and self.fileroot.lut_data2.is_empty() == False:
+                lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
+                # print lut_layer.shape
+                lut_layer = np.reshape(lut_layer, (-1,3))
+                # print lut_layer.shape
+                for i in range(lut_layer.shape[0]):
+                    x = i % 33
+                    y = i / 33
+                    Color(lut_layer[i,0], lut_layer[i,1], lut_layer[i,2])
+                    Rectangle(pos=(x * wid.width / 32.0 + wid.x + 5,
+                                   y * wid.height / 34.0 + wid.y + 15), size=(wid.width / 71.0 , wid.height / 35.0))
                 lut_layer = self.fileroot.lut_data2.get_lut_layer(self.axis, self.layer_index)
                 # print lut_layer.shape
                 lut_layer = np.reshape(lut_layer, (-1,3))
@@ -295,8 +317,18 @@ class LUTtoolsApp(App):
                     x = i % 33
                     y = i / 33
                     Color(lut_layer[i,0], lut_layer[i,1], lut_layer[i,2])
-                    Rectangle(pos=(x * 25 + wid.x + 32,
-                                   y * 18 + wid.y + 20), size=(10, 10))
+                    Rectangle(pos=(x * wid.width / 32.0 + wid.x + 5 +wid.width / 70.0,
+                                   y * wid.height / 34.0 + wid.y + 15), size=(wid.width / 71.0 , wid.height / 35.0))
+                # lut_layer = self.fileroot.lut_data2.get_lut_layer(self.axis, self.layer_index)
+                # # print lut_layer.shape
+                # lut_layer = np.reshape(lut_layer, (-1,3))
+                # # print lut_layer.shape
+                # for i in range(lut_layer.shape[0]):
+                #     x = i % 33
+                #     y = i / 33
+                #     Color(lut_layer[i,0], lut_layer[i,1], lut_layer[i,2])
+                #     Rectangle(pos=(x * 25 + wid.x + 32,
+                #                    y * 18 + wid.y + 20), size=(10, 10))
 
     def update_edit_panel(self, c_wid):
         # lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
@@ -466,7 +498,7 @@ class LUTtoolsApp(App):
         self.slider_list = []
         for i in range(33):
             self.slider_list.append(Slider(min=0, max=1, value=0, value_track=False, orientation='vertical',
-            cursor_size=(18,18), background_width = 0))
+            cursor_size=(18,18), step = 0.000001, background_width = 0))
         for slider_item in self.slider_list:
             slider_layout.add_widget(slider_item)
             slider_item.bind(value=partial(self.oneditcolorvalue,color_wid))
