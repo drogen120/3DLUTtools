@@ -108,40 +108,63 @@ class LUTData(object):
 
     def get_lut_list(self):
         output_lut_table = self.lut_table.transpose((2,1,0,3))
-        output_lut_table = np.reshape(output_lut_table, (-1,3))
+        output_lut_table = np.copy(np.reshape(output_lut_table, (-1,3)))
         output_lut_table = output_lut_table.tolist()
         return output_lut_table
 
     def is_empty(self):
-        if self.lut_table == None:
+        if self.lut_table is None:
             return True
         else:
             return False
 
     def get_lut_layer(self, axis=0, index=0):
         if axis == 0:
-            return self.lut_table[index, :, :, :]
+            result = self.lut_table[index, :, :, :]
         elif axis == 1:
-            return self.lut_table[:, index, :, :]
+            result = self.lut_table[:, index, :, :]
         elif axis == 2:
-            return self.lut_table[:, :, index, :]
+            result = self.lut_table[:, :, index, :]
+
+        return np.copy(result)
 
     def get_edit_lutdata(self, keep_axis, layer_index, edit_axis, slider_value):
         if keep_axis == 0:
             if edit_axis == 1:
-                return self.lut_table[layer_index, :, slider_value, edit_axis]
+                result = self.lut_table[layer_index, :, slider_value, edit_axis]
             else:
-                return self.lut_table[layer_index, slider_value, :, edit_axis]
+                result = self.lut_table[layer_index, slider_value, :, edit_axis]
         elif keep_axis == 1:
             if edit_axis == 0:
-                return self.lut_table[:, layer_index, slider_value, edit_axis]
+                result = self.lut_table[:, layer_index, slider_value, edit_axis]
             else:
-                return self.lut_table[slider_value, layer_index, :, edit_axis]
+                result = self.lut_table[slider_value, layer_index, :, edit_axis]
         elif keep_axis == 2:
             if edit_axis == 0:
-                return self.lut_table[:, slider_value, layer_index, edit_axis]
+                result = self.lut_table[:, slider_value, layer_index, edit_axis]
             else:
-                return self.lut_table[slider_value, :, layer_index, edit_axis]
+                result = self.lut_table[slider_value, :, layer_index, edit_axis]
+
+        return np.copy(result)
+
+    def get_edit_preview_colordata(self, keep_axis, layer_index, edit_axis,slider_value):
+        if keep_axis == 0:
+            if edit_axis == 1:
+                result = self.lut_table[layer_index, :, slider_value, :]
+            else:
+                result = self.lut_table[layer_index, slider_value, :, :]
+        elif keep_axis == 1:
+            if edit_axis == 0:
+                result = self.lut_table[:, layer_index, slider_value, :]
+            else:
+                result = self.lut_table[slider_value, layer_index, :, :]
+        elif keep_axis == 2:
+            if edit_axis == 0:
+                result = self.lut_table[:, slider_value, layer_index, :]
+            else:
+                result = self.lut_table[slider_value, :, layer_index, :]
+
+        return np.copy(result)
 
     def set_edit_lutdata(self, keep_axis, layer_index, edit_axis, slider_value, new_data):
         if keep_axis == 0:
@@ -235,7 +258,6 @@ class Root(FloatLayout):
 
         self.dismiss_popup()
 
-
 class LUTMain(Widget):
     pass
 
@@ -250,8 +272,9 @@ class LUTtoolsApp(App):
 
     def show_lut_layer(self, wid, *largs):
         with wid.canvas:
+            wid.canvas.clear()
             if self.fileroot.lut_data1.is_empty() == False:
-                self.update_edit_panel()
+                # self.update_edit_panel()
                 lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
                 # print lut_layer.shape
                 lut_layer = np.reshape(lut_layer, (-1,3))
@@ -275,13 +298,24 @@ class LUTtoolsApp(App):
                     Rectangle(pos=(x * 25 + wid.x + 32,
                                    y * 18 + wid.y + 20), size=(10, 10))
 
-    def update_edit_panel(self):
+    def update_edit_panel(self, c_wid):
         # lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
         color_data = self.fileroot.lut_data1.get_edit_lutdata(self.axis, self.layer_index, self.edit_axis, self.slider_value)
         self.color_data_list = color_data.tolist()
         for sld, value in zip(self.slider_list, self.color_data_list):
             sld.value = value
+
+        self.color_preview_data = self.fileroot.lut_data1.get_edit_preview_colordata(self.axis, self.layer_index,
+                self.edit_axis, self.slider_value)
+        self.show_edit_preview_color(c_wid, self.color_preview_data)
         self.update_edit_label()
+
+    def show_edit_preview_color(self, c_wid, color_preview_data):
+        with c_wid.canvas:
+            c_wid.canvas.clear()
+            for i in range(color_preview_data.shape[0]):
+                Color(color_preview_data[i,0], color_preview_data[i,1], color_preview_data[i,2])
+                Rectangle(pos=(i * c_wid.width / 33.0 + c_wid.x + c_wid.width / 130.0, c_wid.center_y ), size=(18, 18))
 
     def load_lut(self, wid, file_index, *largs):
         if file_index == 1:
@@ -296,6 +330,8 @@ class LUTtoolsApp(App):
 
     def change_axis(self, wid, *largs):
         self.axis = (self.axis + 1) % len(AxisList)
+        # if (self.axis == self.edit_axis):
+        #     self.edit_axis = (self.edit_axis + 1) % len(AxisList)
         self.update_label()
         self.show_lut_layer(wid)
 
@@ -329,15 +365,22 @@ class LUTtoolsApp(App):
         self.layer_index = int(value)
         self.update_label()
         self.show_lut_layer(wid)
-        self.update_edit_panel()
+        # self.update_edit_panel()
 
-    def onslidervaluechange(self, instance, value):
+    def onslidervaluechange(self, c_wid, instance, value):
         self.slider_value = int(value)
-        self.update_edit_panel()
+        self.update_edit_panel(c_wid)
 
-    def oneditcolorvalue(self, instance, value):
+    def oneditcolorvalue(self, c_wid, instance, value):
         self.color_data_list[self.slider_list.index(instance)] = value
+        if self.color_preview_data is not None:
+            self.color_preview_data[:,self.edit_axis] = np.asarray(self.color_data_list)
+            self.show_edit_preview_color(c_wid, self.color_preview_data)
+
         # print self.color_data_list
+    def edit_press_callback(self, c_wid, instance):
+        # print instance
+        self.update_edit_panel(c_wid)
 
     def update_label(self):
         self.label.text = self.label_pattern.format(AxisList[self.axis], self.layer_index)
@@ -347,11 +390,12 @@ class LUTtoolsApp(App):
         AxisList[self.axis], self.layer_index, self.slider_value)
 
 
-    def swap_axis(self, *largs):
+    def swap_axis(self, c_wid, *largs):
         self.edit_axis = (self.edit_axis + 1) % len(AxisList)
+        self.color_preview_data = None
         if self.edit_axis == self.axis:
              self.edit_axis = (self.edit_axis + 1) % len(AxisList)
-        self.update_edit_panel()
+        self.update_edit_panel(c_wid)
 
     def apply_change(self, *largs):
         self.fileroot.lut_data1.set_edit_lutdata(self.axis, self.layer_index,
@@ -365,6 +409,7 @@ class LUTtoolsApp(App):
         step=1.0, value_track_color=[1, 0, 0, 1], size_hint=(0.1, 1))
         self.label_pattern = "Axis {} : {}"
         self.edit_label_pattern = "Edit Color {}. Keep Axis {} : Layer Index {}. Slide : {}"
+        self.color_preview_data = None
         self.fileroot = Root()
         self.axis = 0
         self.edit_axis = 1
@@ -415,25 +460,31 @@ class LUTtoolsApp(App):
 
         #Edit tab define
         th_text_head = TabbedPanelHeader(text='Edit')
-        slider_layout = BoxLayout(size_hint=(0.9, 1))
+
+        slider_layout = BoxLayout(size_hint=(1, 0.9))
+        color_wid = Widget(size_hint=(1, 0.1))
         self.slider_list = []
         for i in range(33):
             self.slider_list.append(Slider(min=0, max=1, value=0, value_track=False, orientation='vertical',
             cursor_size=(18,18), background_width = 0))
         for slider_item in self.slider_list:
             slider_layout.add_widget(slider_item)
-            slider_item.bind(value=partial(self.oneditcolorvalue))
+            slider_item.bind(value=partial(self.oneditcolorvalue,color_wid))
+
+        edit_preview = BoxLayout(orientation='vertical',size_hint=(0.9, 1))
+        edit_preview.add_widget(slider_layout)
+        edit_preview.add_widget(color_wid)
 
         edit_layout_upper = BoxLayout()
         c_slider = Slider(min=0, max=32, value=0, value_track=True, orientation='vertical',
         step=1.0, value_track_color=[1, 0, 0, 1], size_hint=(0.1, 1))
-        c_slider.bind(value=partial(self.onslidervaluechange))
-        edit_layout_upper.add_widget(slider_layout)
+        c_slider.bind(value=partial(self.onslidervaluechange, color_wid))
+        edit_layout_upper.add_widget(edit_preview)
         edit_layout_upper.add_widget(c_slider)
 
         edit_layout_lower = BoxLayout(size_hint=(1, None), height=50)
         btn_swap_axis = Button(text='Swap Axis',size_hint=(0.15, 1),
-                            on_press=partial(self.swap_axis))
+                            on_press=partial(self.swap_axis, color_wid))
 
         btn_apply_change = Button(text='Apply Change',size_hint=(0.15, 1),
                             on_press=partial(self.apply_change))
@@ -449,6 +500,7 @@ class LUTtoolsApp(App):
         th_text_head.content= edit_layout
 
         tp.add_widget(th_text_head)
+        th_text_head.bind(on_press=partial(self.edit_press_callback, color_wid))
 
         return tp
 
