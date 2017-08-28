@@ -13,13 +13,18 @@ from kivy.factory import Factory
 from kivy.properties import ObjectProperty
 from kivy.uix.tabbedpanel import TabbedPanel
 from kivy.uix.tabbedpanel import TabbedPanelHeader
+from kivy.uix.image import Image
+from kivy.core.image import Image as CoreImage
+from kivy.graphics.texture import Texture
 
 import os
 import csv
+from PIL import Image as PILImage
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import numpy as np
+from scipy.interpolate import RegularGridInterpolator
 
 AxisList = ["Red", "Green", "Blue"]
 # AxisList = ["Blue", "Green", "Red"] #Because of the reshape, the axis is different from lut doc
@@ -106,6 +111,9 @@ class LUTData(object):
     def set_lut(self, lut):
         self.lut_table = lut
 
+    def get_lut(self):
+        return self.lut_table
+
     def get_lut_list(self):
         output_lut_table = self.lut_table.transpose((2,1,0,3))
         output_lut_table = np.copy(np.reshape(output_lut_table, (-1,3)))
@@ -182,6 +190,28 @@ class LUTData(object):
                 self.lut_table[:, slider_value, layer_index, edit_axis] = new_data
             else:
                 self.lut_table[slider_value, :, layer_index, edit_axis] = new_data
+
+    def applyLUT(self, img):
+
+        if self.is_empty() == True:
+            return None
+        x = np.linspace(0, 1.0, 33)
+        y = np.linspace(0, 1.0, 33)
+        z = np.linspace(0, 1.0, 33)
+        lut = self.get_lut()
+        # lut = lut.transpose((2,1,0,3))
+
+        img = img / 255.0
+
+        interpolating_function = RegularGridInterpolator((x, y, z), lut)
+
+        result_img = np.zeros_like(img, dtype=np.float)
+        for i in range(0, img.shape[0]):
+            for j in range(0, img.shape[1]):
+                pts = img[i, j, :]
+                result_img[i, j, :] = interpolating_function(pts)
+
+        return np.uint8(result_img * 255.0)
 
 class Root(FloatLayout):
     loadfile = ObjectProperty(None)
@@ -273,18 +303,6 @@ class LUTtoolsApp(App):
     def show_lut_layer(self, wid, *largs):
         with wid.canvas:
             wid.canvas.clear()
-            # if self.fileroot.lut_data1.is_empty() == False:
-            #     # self.update_edit_panel()
-            #     lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
-            #     # print lut_layer.shape
-            #     lut_layer = np.reshape(lut_layer, (-1,3))
-            #     # print lut_layer.shape
-            #     for i in range(lut_layer.shape[0]):
-            #         x = i % 33
-            #         y = i / 33
-            #         Color(lut_layer[i,0], lut_layer[i,1], lut_layer[i,2])
-            #         Rectangle(pos=(x * 25 + wid.x + 20,
-            #                        y * 18 + wid.y + 20), size=(10, 10))
             if self.fileroot.lut_data1.is_empty() == False and self.fileroot.lut_data2.is_empty() == True:
                 # self.update_edit_panel()
                 lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
@@ -319,16 +337,6 @@ class LUTtoolsApp(App):
                     Color(lut_layer[i,0], lut_layer[i,1], lut_layer[i,2])
                     Rectangle(pos=(x * wid.width / 32.0 + wid.x + 5 +wid.width / 70.0,
                                    y * wid.height / 34.0 + wid.y + 15), size=(wid.width / 71.0 , wid.height / 35.0))
-                # lut_layer = self.fileroot.lut_data2.get_lut_layer(self.axis, self.layer_index)
-                # # print lut_layer.shape
-                # lut_layer = np.reshape(lut_layer, (-1,3))
-                # # print lut_layer.shape
-                # for i in range(lut_layer.shape[0]):
-                #     x = i % 33
-                #     y = i / 33
-                #     Color(lut_layer[i,0], lut_layer[i,1], lut_layer[i,2])
-                #     Rectangle(pos=(x * 25 + wid.x + 32,
-                #                    y * 18 + wid.y + 20), size=(10, 10))
 
     def update_edit_panel(self, c_wid):
         # lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
@@ -341,6 +349,33 @@ class LUTtoolsApp(App):
                 self.edit_axis, self.slider_value)
         self.show_edit_preview_color(c_wid, self.color_preview_data)
         self.update_edit_label()
+
+    def show_pre_image(self, img_wid, *largs):
+        im = PILImage.open("./img/wql_result.jpeg")
+        im = im.transpose(PILImage.FLIP_TOP_BOTTOM)
+        self.img_array = np.array(im)
+        print self.img_array
+        temp_array = np.copy(self.img_array)
+        texture = Texture.create(size=(500, 350), colorfmt="rgb")
+        data = temp_array.tostring()
+        texture.blit_buffer(data, bufferfmt="ubyte", colorfmt="rgb")
+
+        with img_wid.canvas:
+            Rectangle(texture=texture, pos=(img_wid.x, img_wid.y), size=(500, 350))
+
+    def apply_lut_image(self, img_wid, *largs):
+        self.lut_img_array = self.fileroot.lut_data1.applyLUT(np.copy(self.img_array))
+        print self.lut_img_array
+        # temp = np.uint8(self.lut_img_array)
+        temp = np.copy(self.lut_img_array)
+        texture = Texture.create(size=(500, 350), colorfmt="rgb")
+        data = temp.tostring()
+        texture.blit_buffer(data, bufferfmt="ubyte", colorfmt="rgb")
+
+        with img_wid.canvas:
+            img_wid.canvas.clear()
+            Rectangle(texture=texture, pos=(img_wid.x, img_wid.y), size=(500, 350))
+
 
     def show_edit_preview_color(self, c_wid, color_preview_data):
         with c_wid.canvas:
@@ -414,6 +449,16 @@ class LUTtoolsApp(App):
         # print instance
         self.update_edit_panel(c_wid)
 
+    # def imgpreview_press_callback(self, img_wid, img_array, instance):
+    #     print "++++++++++++"
+    #     print img_array.shape
+    #     img_lut = img_array #self.fileroot.lut_data1.applyLUT(img_array)
+    #     img_texture = Texture.create(size=img_lut.shape[:2])
+    #     img_texture.blit_buffer(img_lut.flatten(), colorfmt='rgb', bufferfmt='ubyte')
+    #
+    #     with img_wid.canvas:
+    #         Rectangle(texture=img_texture, pos=img_wid.pos, size=img_wid.size)
+
     def update_label(self):
         self.label.text = self.label_pattern.format(AxisList[self.axis], self.layer_index)
 
@@ -438,7 +483,7 @@ class LUTtoolsApp(App):
 
         wid = Widget(size_hint=(0.9, 1))
         slider = Slider(min=0, max=32, value=0, value_track=True, orientation='vertical',
-        step=1.0, value_track_color=[1, 0, 0, 1], size_hint=(0.1, 1))
+            step=1.0, value_track_color=[1, 0, 0, 1], size_hint=(0.1, 1))
         self.label_pattern = "Axis {} : {}"
         self.edit_label_pattern = "Edit Color {}. Keep Axis {} : Layer Index {}. Slide : {}"
         self.color_preview_data = None
@@ -491,7 +536,7 @@ class LUTtoolsApp(App):
         tp.default_tab_content = root
 
         #Edit tab define
-        th_text_head = TabbedPanelHeader(text='Edit')
+        th_edittab_head = TabbedPanelHeader(text='Edit')
 
         slider_layout = BoxLayout(size_hint=(1, 0.9))
         color_wid = Widget(size_hint=(1, 0.1))
@@ -529,10 +574,34 @@ class LUTtoolsApp(App):
         edit_layout.add_widget(edit_layout_upper)
         edit_layout.add_widget(edit_layout_lower)
 
-        th_text_head.content= edit_layout
+        th_edittab_head.content= edit_layout
 
-        tp.add_widget(th_text_head)
-        th_text_head.bind(on_press=partial(self.edit_press_callback, color_wid))
+        tp.add_widget(th_edittab_head)
+        th_edittab_head.bind(on_press=partial(self.edit_press_callback, color_wid))
+
+        #Preview tab define
+        th_previewimg_head = TabbedPanelHeader(text='Preview')
+        images_layout = BoxLayout(orientation='vertical')
+        img_wid = Widget(size_hint=(1, 0.9))
+        button_layout = BoxLayout(size_hint=(1, None), height=50)
+        # img_array = cv2.imread('./img/wql_result.jpeg')
+
+        btn_show_img = Button(text='Show Image',
+                            on_press=partial(self.show_pre_image, img_wid))
+        btn_apply_lut = Button(text='Apply LUT',
+                            on_press=partial(self.apply_lut_image, img_wid))
+
+        button_layout.add_widget(btn_show_img)
+        button_layout.add_widget(btn_apply_lut)
+
+
+        # th_previewimg_head.bind(on_press=partial(self.imgpreview_press_callback, img_wid, img_array))
+
+        images_layout.add_widget(Label(text=""))
+        images_layout.add_widget(img_wid)
+        images_layout.add_widget(button_layout)
+        th_previewimg_head.content = images_layout
+        tp.add_widget(th_previewimg_head)
 
         return tp
 
