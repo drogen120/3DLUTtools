@@ -16,6 +16,7 @@ from kivy.uix.tabbedpanel import TabbedPanelHeader
 from kivy.uix.image import Image
 from kivy.core.image import Image as CoreImage
 from kivy.graphics.texture import Texture
+from kivy.animation import Animation
 
 import os
 import csv
@@ -351,17 +352,23 @@ class LUTtoolsApp(App):
         self.update_edit_label()
 
     def show_pre_image(self, img_wid, *largs):
+
         im = PILImage.open("./img/wql_result.jpeg")
         im = im.transpose(PILImage.FLIP_TOP_BOTTOM)
+        self.img_width, self.img_height = im.size
+        # print im.size
+        # print img_wid.height
         self.img_array = np.array(im)
-        print self.img_array
+        # print self.img_array
         temp_array = np.copy(self.img_array)
         texture = Texture.create(size=(500, 350), colorfmt="rgb")
         data = temp_array.tostring()
         texture.blit_buffer(data, bufferfmt="ubyte", colorfmt="rgb")
 
+        # pos=(img_wid.x + (img_wid.center_x / 2.0 - img_width / 2.0), img_wid.y + (img_wid.center_y - img_height / 2.0)),
+
         with img_wid.canvas:
-            Rectangle(texture=texture, pos=(img_wid.x, img_wid.y), size=(500, 350))
+            Rectangle(texture=texture, pos = (img_wid.center_x - self.img_width, img_wid.center_y),size=(500, 350))
 
     def apply_lut_image(self, img_wid, *largs):
         self.lut_img_array = self.fileroot.lut_data1.applyLUT(np.copy(self.img_array))
@@ -373,9 +380,8 @@ class LUTtoolsApp(App):
         texture.blit_buffer(data, bufferfmt="ubyte", colorfmt="rgb")
 
         with img_wid.canvas:
-            img_wid.canvas.clear()
-            Rectangle(texture=texture, pos=(img_wid.x, img_wid.y), size=(500, 350))
-
+            # img_wid.canvas.clear()
+            Rectangle(texture=texture, pos = (img_wid.center_x + self.img_width / 8.0, img_wid.center_y),size=(500, 350))
 
     def show_edit_preview_color(self, c_wid, color_preview_data):
         with c_wid.canvas:
