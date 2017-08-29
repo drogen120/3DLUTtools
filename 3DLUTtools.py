@@ -17,9 +17,13 @@ from kivy.uix.image import Image
 from kivy.core.image import Image as CoreImage
 from kivy.graphics.texture import Texture
 from kivy.animation import Animation
+from kivy.properties import NumericProperty
+from kivy.uix.progressbar import ProgressBar
+from kivy.clock import Clock, mainthread
 
 import os
 import csv
+import threading
 from PIL import Image as PILImage
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
@@ -30,6 +34,12 @@ from scipy.interpolate import RegularGridInterpolator
 AxisList = ["Red", "Green", "Blue"]
 # AxisList = ["Blue", "Green", "Red"] #Because of the reshape, the axis is different from lut doc
 AxisPlotDic = {"Red" : 0, "Green" : 1, "Blue" : 2}
+
+class PopupBox(Popup):
+    pop_up_text = ObjectProperty()
+    def update_pop_up_text(self, p_message):
+        self.pop_up_text.text = p_message
+
 class Draw3DSurface(object):
     def __init__(self, step=0.030304):
         # self.lut_table = np.zeros((33, 33, 33, 3), dtype = np.float)
@@ -205,7 +215,7 @@ class LUTData(object):
         img = img / 255.0
 
         interpolating_function = RegularGridInterpolator((x, y, z), lut)
-
+        count = 0
         result_img = np.zeros_like(img, dtype=np.float)
         for i in range(0, img.shape[0]):
             for j in range(0, img.shape[1]):
@@ -294,6 +304,11 @@ class LUTMain(Widget):
 
 class LUTtoolsApp(App):
 
+    def show_popup(self):
+        self.pop_up = Factory.PopupBox()
+        self.pop_up.update_pop_up_text('Applying the LUT...')
+        self.pop_up.open()
+
     def add_rects(self, wid, count, *largs):
         with wid.canvas:
             for x in range(count):
@@ -368,12 +383,26 @@ class LUTtoolsApp(App):
         # pos=(img_wid.x + (img_wid.center_x / 2.0 - img_width / 2.0), img_wid.y + (img_wid.center_y - img_height / 2.0)),
 
         with img_wid.canvas:
-            Rectangle(texture=texture, pos = (img_wid.center_x - self.img_width, img_wid.center_y),size=(500, 350))
+            Rectangle(texture=texture, pos = (img_wid.center_x / 2.0 - self.img_width / 2.0,
+                img_wid.center_y - self.img_height / 2.0),size=(500, 350))
 
-    def apply_lut_image(self, img_wid, *largs):
+    def apply_lut_image(self, img_wid):
+        self.pb.value = 300
         self.lut_img_array = self.fileroot.lut_data1.applyLUT(np.copy(self.img_array))
-        print self.lut_img_array
+        self.pb.value = 1000
+        # print self.lut_img_array
         # temp = np.uint8(self.lut_img_array)
+
+        self.pop_up.dismiss()
+        self.update_img_widget(img_wid)
+
+    def onApplyLUTClick(self, img_wid, *largs):
+        self.show_popup()
+        mythread = threading.Thread(target=self.apply_lut_image, args=(img_wid,))
+        mythread.start()
+
+    @mainthread
+    def update_img_widget(self, img_wid):
         temp = np.copy(self.lut_img_array)
         texture = Texture.create(size=(500, 350), colorfmt="rgb")
         data = temp.tostring()
@@ -381,7 +410,8 @@ class LUTtoolsApp(App):
 
         with img_wid.canvas:
             # img_wid.canvas.clear()
-            Rectangle(texture=texture, pos = (img_wid.center_x + self.img_width / 8.0, img_wid.center_y),size=(500, 350))
+            Rectangle(texture=texture, pos = (img_wid.center_x + img_wid.center_x / 2.0 - self.img_width / 2.0,
+                img_wid.center_y - self.img_height / 2.0),size=(500, 350))
 
     def show_edit_preview_color(self, c_wid, color_preview_data):
         with c_wid.canvas:
@@ -595,7 +625,7 @@ class LUTtoolsApp(App):
         btn_show_img = Button(text='Show Image',
                             on_press=partial(self.show_pre_image, img_wid))
         btn_apply_lut = Button(text='Apply LUT',
-                            on_press=partial(self.apply_lut_image, img_wid))
+                            on_press=partial(self.onApplyLUTClick, img_wid))
 
         button_layout.add_widget(btn_show_img)
         button_layout.add_widget(btn_apply_lut)
@@ -603,7 +633,8 @@ class LUTtoolsApp(App):
 
         # th_previewimg_head.bind(on_press=partial(self.imgpreview_press_callback, img_wid, img_array))
 
-        images_layout.add_widget(Label(text=""))
+        self.pb = ProgressBar(max=1000,size_hint=(1, 0.05))
+        images_layout.add_widget(self.pb)
         images_layout.add_widget(img_wid)
         images_layout.add_widget(button_layout)
         th_previewimg_head.content = images_layout

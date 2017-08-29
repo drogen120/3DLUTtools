@@ -69,3 +69,15 @@ Root:
             Button:
                 text: "Save"
                 on_release: root.save(filechooser.path, text_input.text)
+
+<PopupBox>:
+    pop_up_text: _pop_up_text
+    size_hint: .5, .5
+    auto_dismiss: True
+    title: 'Processing'
+
+    BoxLayout:
+        orientation: "vertical"
+        Label:
+            id: _pop_up_text
+            text: ''
