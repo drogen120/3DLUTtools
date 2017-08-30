@@ -20,6 +20,9 @@ from kivy.animation import Animation
 from kivy.properties import NumericProperty
 from kivy.uix.progressbar import ProgressBar
 from kivy.clock import Clock, mainthread
+from kivy.uix.textinput import TextInput
+from kivy.garden.graph import Graph, MeshLinePlot
+from kivy.uix.togglebutton import ToggleButton
 
 import os
 import csv
@@ -30,6 +33,8 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
+from math import sin
+from utils import NumericStringParser
 
 AxisList = ["Red", "Green", "Blue"]
 # AxisList = ["Blue", "Green", "Red"] #Because of the reshape, the axis is different from lut doc
@@ -47,7 +52,7 @@ class Draw3DSurface(object):
         self.Y = np.arange(0, 1, step)
         self.X, self.Y = np.meshgrid(self.X, self.Y)
     def plot(self, Z1, Z2, plot_axis):
-        if Z1 != None and Z2 != None:
+        if Z1 is not None and Z2 is not None:
             fig = plt.figure(figsize=plt.figaspect(0.5))
             ax = fig.add_subplot(1, 2, 1, projection='3d')
             ax.plot_surface(self.X, self.Y, Z1, rstride=1, cstride=1, alpha=0.3)
@@ -74,7 +79,7 @@ class Draw3DSurface(object):
             ax.set_zlim(0, 1)
 
             plt.show()
-        elif Z1 != None:
+        elif Z1 is not None:
             fig = plt.figure()
             ax = fig.gca(projection='3d')
             ax.plot_surface(self.X, self.Y, Z1, rstride=1, cstride=1, alpha=0.3)
@@ -88,7 +93,7 @@ class Draw3DSurface(object):
             ax.set_zlabel(plot_axis)
             ax.set_zlim(0, 1)
             plt.show()
-        elif Z2 != None:
+        elif Z2 is not None:
             fig = plt.figure()
             ax = fig.gca(projection='3d')
             ax.plot_surface(self.X, self.Y, Z2, rstride=1, cstride=1, alpha=0.3)
@@ -123,7 +128,13 @@ class LUTData(object):
         self.lut_table = lut
 
     def get_lut(self):
-        return self.lut_table
+        return np.copy(self.lut_table)
+
+    def get_lut_by_channel(self, channel_index):
+        return np.copy(self.lut_table[:,:,:,channel_index])
+
+    def set_lut_by_channel(self, channel_index, lut_channel):
+        self.lut_table[:,:,:,channel_index] = lut_channel
 
     def get_lut_list(self):
         output_lut_table = self.lut_table.transpose((2,1,0,3))
@@ -380,8 +391,6 @@ class LUTtoolsApp(App):
         data = temp_array.tostring()
         texture.blit_buffer(data, bufferfmt="ubyte", colorfmt="rgb")
 
-        # pos=(img_wid.x + (img_wid.center_x / 2.0 - img_width / 2.0), img_wid.y + (img_wid.center_y - img_height / 2.0)),
-
         with img_wid.canvas:
             Rectangle(texture=texture, pos = (img_wid.center_x / 2.0 - self.img_width / 2.0,
                 img_wid.center_y - self.img_height / 2.0),size=(500, 350))
@@ -392,9 +401,8 @@ class LUTtoolsApp(App):
         self.pb.value = 1000
         # print self.lut_img_array
         # temp = np.uint8(self.lut_img_array)
-
-        self.pop_up.dismiss()
         self.update_img_widget(img_wid)
+        self.pop_up.dismiss()
 
     def onApplyLUTClick(self, img_wid, *largs):
         self.show_popup()
@@ -459,6 +467,16 @@ class LUTtoolsApp(App):
                 elif plot_type == 3:
                     self.plot3d.plot(lut_layer_1[:,:,value], lut_layer_2[:,:,value], key)
                 # self.plot3d.plot(lut_layer[:,:,value], key)
+            else:
+                if plot_type == 0:
+                    pass
+                elif plot_type == 1:
+                    self.plot3d.plot(lut_layer_1[:,:,value] + 1.0e-10, None, key)
+                elif plot_type == 2:
+                    self.plot3d.plot(None, lut_layer_2[:,:,value] + 1.0e-10, key)
+                elif plot_type == 3:
+                    self.plot3d.plot(lut_layer_1[:,:,value] + 1.0e-10, lut_layer_2[:,:,value] + 1.0e-10, key)
+
 
     def reset_rects(self, wid, *largs):
         pass
@@ -485,16 +503,6 @@ class LUTtoolsApp(App):
         # print instance
         self.update_edit_panel(c_wid)
 
-    # def imgpreview_press_callback(self, img_wid, img_array, instance):
-    #     print "++++++++++++"
-    #     print img_array.shape
-    #     img_lut = img_array #self.fileroot.lut_data1.applyLUT(img_array)
-    #     img_texture = Texture.create(size=img_lut.shape[:2])
-    #     img_texture.blit_buffer(img_lut.flatten(), colorfmt='rgb', bufferfmt='ubyte')
-    #
-    #     with img_wid.canvas:
-    #         Rectangle(texture=img_texture, pos=img_wid.pos, size=img_wid.size)
-
     def update_label(self):
         self.label.text = self.label_pattern.format(AxisList[self.axis], self.layer_index)
 
@@ -513,6 +521,32 @@ class LUTtoolsApp(App):
     def apply_change(self, *largs):
         self.fileroot.lut_data1.set_edit_lutdata(self.axis, self.layer_index,
             self.edit_axis, self.slider_value, np.asarray(self.color_data_list))
+
+    def show_curve(self, graph, function_input, *largs):
+        plot = MeshLinePlot(color=[1, 0, 0, 1])
+        x = np.linspace(0, 1, 100)
+        nsp = NumericStringParser(x)
+        y = nsp.eval(function_input.text)
+        # y = np.power(x, 1/2.0)
+        plot.points = [(p_x, p_y) for p_x, p_y in zip(x, y)]
+        graph.add_plot(plot)
+
+    def apply_adjust(self, function_input, *largs):
+        if self.toggle_type == "All":
+            x = self.fileroot.lut_data1.get_lut()
+            nsp = NumericStringParser(x)
+            new_lut = nsp.eval(function_input.text)
+            self.fileroot.lut_data1.set_lut(new_lut)
+        else:
+            x = self.fileroot.lut_data1.get_lut_by_channel(AxisPlotDic[self.toggle_type])
+            nsp = NumericStringParser(x)
+            new_lut = nsp.eval(function_input.text)
+            self.fileroot.lut_data1.set_lut_by_channel(AxisPlotDic[self.toggle_type], new_lut)
+
+
+    def onPressToggle(self, *largs):
+        current = [t for t in ToggleButton.get_widgets('type') if t.state=='down'][0]
+        self.toggle_type = current.text
 
     def build(self):
         tp = TabbedPanel()
@@ -614,6 +648,54 @@ class LUTtoolsApp(App):
 
         tp.add_widget(th_edittab_head)
         th_edittab_head.bind(on_press=partial(self.edit_press_callback, color_wid))
+
+        th_adjusttab_head = TabbedPanelHeader(text='Adjust')
+        function_label = Label(text='Adjust Function: ', size_hint=(0.1, 1))
+        function_input = TextInput(text='', multiline=False, size_hint=(0.7, 1))
+        btn_all = ToggleButton(text='All', group='type',state='down',
+            on_press=partial(self.onPressToggle), size_hint=(0.05, 1))
+        btn_red = ToggleButton(text='Red', group='type',
+            on_press=partial(self.onPressToggle), size_hint=(0.05, 1))
+        btn_green = ToggleButton(text='Green', group='type',
+            on_press=partial(self.onPressToggle), size_hint=(0.05, 1))
+        btn_blue = ToggleButton(text='Blue', group='type',
+            on_press=partial(self.onPressToggle), size_hint=(0.05, 1))
+        self.toggle_type = btn_all.text
+        function_layout = BoxLayout(size_hint=(1, None), height=30)
+        function_layout.add_widget(function_label)
+        function_layout.add_widget(function_input)
+        function_layout.add_widget(btn_all)
+        function_layout.add_widget(btn_red)
+        function_layout.add_widget(btn_green)
+        function_layout.add_widget(btn_blue)
+
+        graph_layout = BoxLayout()
+
+        graph = Graph(xlabel='In', ylabel='Out',
+            x_ticks_major=1, y_ticks_major=1,
+            y_grid_label=True, x_grid_label=True, padding=5,
+            x_grid=True, y_grid=True, xmin=0, xmax=1, ymin=0, ymax=1, size_hint=(0.5, 1))
+        # plot = MeshLinePlot(color=[1, 0, 0, 1])
+        # plot.points = [(x, sin(x / 10.)) for x in range(0, 101)]
+        # graph.add_plot(plot)
+        adjust_wid = Widget(size_hint=(0.5, 1))
+        graph_layout.add_widget(graph)
+        graph_layout.add_widget(adjust_wid)
+
+        adjust_btn_layout = BoxLayout(size_hint=(1, None), height=50)
+        btn_show_curve = Button(text='Show Curve',
+                            on_press=partial(self.show_curve, graph, function_input))
+        btn_apply_adjust = Button(text='Apply Adjust',
+                            on_press=partial(self.apply_adjust, function_input))
+        adjust_btn_layout.add_widget(btn_show_curve)
+        adjust_btn_layout.add_widget(btn_apply_adjust)
+
+        adjust_layout = BoxLayout(orientation='vertical')
+        adjust_layout.add_widget(function_layout)
+        adjust_layout.add_widget(graph_layout)
+        adjust_layout.add_widget(adjust_btn_layout)
+        th_adjusttab_head.content = adjust_layout
+        tp.add_widget(th_adjusttab_head)
 
         #Preview tab define
         th_previewimg_head = TabbedPanelHeader(text='Preview')
