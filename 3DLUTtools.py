@@ -142,6 +142,17 @@ class LUTData(object):
         output_lut_table = output_lut_table.tolist()
         return output_lut_table
 
+    def make_identy_lut_list(self):
+        x = np.linspace(0, 1.0, 33)
+        y = np.linspace(0, 1.0, 33)
+        z = np.linspace(0, 1.0, 33)
+        a_x, a_y, a_z = np.meshgrid(x,y,z)
+        identy_array = np.stack((a_x,a_y,a_z), axis = 3)
+        identy_array = identy_array.transpose((2, 0, 1, 3))
+        identy_array = np.reshape(identy_array, (-1, 3))
+        identy_list = identy_array.tolist()
+        return identy_list
+
     def is_empty(self):
         if self.lut_table is None:
             return True
@@ -273,6 +284,7 @@ class Root(FloatLayout):
             datawriter.writerow(["LUT_3D_INPUT_RANGE", "0.0000000000", "1.0000000000"])
             datawriter.writerow([])
             output_list = LUT_data.get_lut_list()
+            # output_list = LUT_data.make_identy_lut_list()
             for row in output_list:
                 datawriter.writerow(row)
 
@@ -402,7 +414,7 @@ class LUTtoolsApp(App):
         # print self.lut_img_array
         # temp = np.uint8(self.lut_img_array)
         self.update_img_widget(img_wid)
-        self.pop_up.dismiss()
+        # self.pop_up.dismiss()
 
     def onApplyLUTClick(self, img_wid, *largs):
         self.show_popup()
@@ -411,6 +423,7 @@ class LUTtoolsApp(App):
 
     @mainthread
     def update_img_widget(self, img_wid):
+        self.pop_up.dismiss()
         temp = np.copy(self.lut_img_array)
         texture = Texture.create(size=(500, 350), colorfmt="rgb")
         data = temp.tostring()
@@ -538,8 +551,10 @@ class LUTtoolsApp(App):
             new_lut = nsp.eval(function_input.text)
             self.fileroot.lut_data1.set_lut(new_lut)
         else:
-            x = self.fileroot.lut_data1.get_lut_by_channel(AxisPlotDic[self.toggle_type])
-            nsp = NumericStringParser(x)
+            x = self.fileroot.lut_data1.get_lut_by_channel(0)
+            y = self.fileroot.lut_data1.get_lut_by_channel(1)
+            z = self.fileroot.lut_data1.get_lut_by_channel(2)
+            nsp = NumericStringParser(x, y, z)
             new_lut = nsp.eval(function_input.text)
             self.fileroot.lut_data1.set_lut_by_channel(AxisPlotDic[self.toggle_type], new_lut)
 

@@ -18,7 +18,7 @@ class NumericStringParser(object):
         if toks and toks[0] == '-':
             self.exprStack.append('unary -')
 
-    def __init__(self, array_x):
+    def __init__(self, array_x, array_y = None, array_z = None):
         """
         expop   :: '^'
         multop  :: '*' | '/'
@@ -32,6 +32,8 @@ class NumericStringParser(object):
         point = Literal(".")
         e = CaselessLiteral("E")
         x = CaselessLiteral("x")
+        y = CaselessLiteral("y")
+        z = CaselessLiteral("z")
         fnumber = Combine(Word("+-" + nums, nums) +
                           Optional(point + Optional(Word(nums))) +
                           Optional(e + Word("+-" + nums, nums)))
@@ -48,7 +50,7 @@ class NumericStringParser(object):
         pi = CaselessLiteral("PI")
         expr = Forward()
         atom = ((Optional(oneOf("- +")) +
-                 (ident + lpar + expr + rpar | pi | e | fnumber | x).setParseAction(self.pushFirst))
+                 (ident + lpar + expr + rpar | pi | e | fnumber | x | y | z).setParseAction(self.pushFirst))
                 | Optional(oneOf("- +")) + Group(lpar + expr + rpar)
                 ).setParseAction(self.pushUMinus)
         # by defining exponentiation as "atom [ ^ factor ]..." instead of
@@ -79,9 +81,13 @@ class NumericStringParser(object):
                    "abs": np.abs,
                    "trunc": lambda a: int(a),
                    "round": round,
+                   "relu" : lambda a: np.maximum(a, 0),
+                   "reluto1" : lambda a: np.minimum(np.maximum(a, 0), 1),
                    "sgn": lambda a: abs(a) > epsilon and cmp(a, 0) or 0}
 
         self.array_x = array_x
+        self.array_y = array_y
+        self.array_z = array_z
 
     def evaluateStack(self, s):
         op = s.pop()
@@ -97,6 +103,10 @@ class NumericStringParser(object):
             return math.e  # 2.718281828
         elif op == "x":
             return self.array_x
+        elif op == "y":
+            return self.array_y
+        elif op == "z":
+            return self.array_z
         elif op in self.fn:
             return self.fn[op](self.evaluateStack(s))
         elif op[0].isalpha():
@@ -108,7 +118,7 @@ class NumericStringParser(object):
         self.exprStack = []
         results = self.bnf.parseString(num_string, parseAll)
         val = self.evaluateStack(self.exprStack[:])
-        return val
+        return np.minimum(np.maximum(val, 0), 1)
 #
 # nsp = NumericStringParser()
 # result = nsp.eval('2^4')
