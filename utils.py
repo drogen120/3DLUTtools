@@ -85,9 +85,9 @@ class NumericStringParser(object):
                    "reluto1" : lambda a: np.minimum(np.maximum(a, 0), 1),
                    "sgn": lambda a: abs(a) > epsilon and cmp(a, 0) or 0}
 
-        self.array_x = array_x
-        self.array_y = array_y
-        self.array_z = array_z
+        self.array_x = np.copy(array_x)
+        self.array_y = np.copy(array_y)
+        self.array_z = np.copy(array_z)
 
     def evaluateStack(self, s):
         op = s.pop()

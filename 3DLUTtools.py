@@ -544,8 +544,60 @@ class LUTtoolsApp(App):
         plot.points = [(p_x, p_y) for p_x, p_y in zip(x, y)]
         graph.add_plot(plot)
 
-    def apply_adjust(self, function_input, *largs):
-        if self.toggle_type == "All":
+    def show_adjust_image(self, wid, function_input, *largs):
+        im = PILImage.open("./img/wql_result.jpeg")
+        im = im.transpose(PILImage.FLIP_TOP_BOTTOM)
+        self.img_width, self.img_height = im.size
+        self.img_array = np.array(im)
+        print self.img_array
+        temp_array = np.copy(self.img_array)
+        texture = Texture.create(size=(500, 350), colorfmt="rgb")
+        data = temp_array.tostring()
+        texture.blit_buffer(data, bufferfmt="ubyte", colorfmt="rgb")
+
+        with wid.canvas:
+            wid.canvas.clear()
+            Rectangle(texture=texture, pos = (wid.center_x - self.img_width / 2.0,
+                wid.center_y - self.img_height / 2.0),size=(500, 350))
+
+    def preview_adjust(self, wid, function_input, function_input_red, function_input_green, function_input_blue, *largs):
+        if function_input.text != "":
+            x = self.img_array / 255.0
+            nsp = NumericStringParser(x)
+            preview_img_array = nsp.eval(function_input.text) * 255.0
+        else:
+            x = self.img_array / 255.0
+            nsp = NumericStringParser(x[:,:,0],x[:,:,1],x[:,:,2])
+            if function_input_red.text != "":
+                x[:,:,0] = nsp.eval(function_input_red.text)
+            if function_input_green.text != "":
+                x[:,:,1] = nsp.eval(function_input_green.text)
+            if function_input_blue.text != "":
+                x[:,:,2] = nsp.eval(function_input_blue.text)
+
+            preview_img_array = x * 255.0
+
+        texture = Texture.create(size=(500, 350), colorfmt="rgb")
+        preview_img_array = np.uint8(preview_img_array)
+        # print preview_img_array
+        data = preview_img_array.tostring()
+        texture.blit_buffer(data, bufferfmt="ubyte", colorfmt="rgb")
+
+        with wid.canvas:
+            wid.canvas.clear()
+            Rectangle(texture=texture, pos = (wid.center_x - self.img_width / 2.0,
+                wid.center_y - self.img_height / 2.0),size=(500, 350))
+
+        # else:
+        #     x = self.fileroot.lut_data1.get_lut_by_channel(0)
+        #     y = self.fileroot.lut_data1.get_lut_by_channel(1)
+        #     z = self.fileroot.lut_data1.get_lut_by_channel(2)
+        #     nsp = NumericStringParser(x, y, z)
+        #     new_lut = nsp.eval(function_input.text)
+        #     self.fileroot.lut_data1.set_lut_by_channel(AxisPlotDic[self.toggle_type], new_lut)
+
+    def apply_adjust(self, function_input, function_input_red, function_input_green, function_input_blue, *largs):
+        if function_input.text != "":
             x = self.fileroot.lut_data1.get_lut()
             nsp = NumericStringParser(x)
             new_lut = nsp.eval(function_input.text)
@@ -555,13 +607,20 @@ class LUTtoolsApp(App):
             y = self.fileroot.lut_data1.get_lut_by_channel(1)
             z = self.fileroot.lut_data1.get_lut_by_channel(2)
             nsp = NumericStringParser(x, y, z)
-            new_lut = nsp.eval(function_input.text)
-            self.fileroot.lut_data1.set_lut_by_channel(AxisPlotDic[self.toggle_type], new_lut)
+            if function_input_red.text != "":
+                new_lut = nsp.eval(function_input_red.text)
+                self.fileroot.lut_data1.set_lut_by_channel(0, new_lut)
 
+            if function_input_green.text != "":
+                new_lut = nsp.eval(function_input_green.text)
+                self.fileroot.lut_data1.set_lut_by_channel(1, new_lut)
 
-    def onPressToggle(self, *largs):
-        current = [t for t in ToggleButton.get_widgets('type') if t.state=='down'][0]
-        self.toggle_type = current.text
+            if function_input_blue.text != "":
+                new_lut = nsp.eval(function_input_blue.text)
+                self.fileroot.lut_data1.set_lut_by_channel(2, new_lut)
+
+    def function_input_clear(self, instance):
+        print instance
 
     def build(self):
         tp = TabbedPanel()
@@ -665,24 +724,52 @@ class LUTtoolsApp(App):
         th_edittab_head.bind(on_press=partial(self.edit_press_callback, color_wid))
 
         th_adjusttab_head = TabbedPanelHeader(text='Adjust')
-        function_label = Label(text='Adjust Function: ', size_hint=(0.1, 1))
+        function_label = Label(text='Function All: ', size_hint=(0.2, 1))
+        function_label_red = Label(text='Function Red: ', size_hint=(0.2, 1))
+        function_label_green = Label(text='Function Green: ', size_hint=(0.2, 1))
+        function_label_blue = Label(text='Function Blue: ', size_hint=(0.2, 1))
+
         function_input = TextInput(text='', multiline=False, size_hint=(0.7, 1))
-        btn_all = ToggleButton(text='All', group='type',state='down',
-            on_press=partial(self.onPressToggle), size_hint=(0.05, 1))
-        btn_red = ToggleButton(text='Red', group='type',
-            on_press=partial(self.onPressToggle), size_hint=(0.05, 1))
-        btn_green = ToggleButton(text='Green', group='type',
-            on_press=partial(self.onPressToggle), size_hint=(0.05, 1))
-        btn_blue = ToggleButton(text='Blue', group='type',
-            on_press=partial(self.onPressToggle), size_hint=(0.05, 1))
-        self.toggle_type = btn_all.text
+        function_input_red = TextInput(text='', multiline=False, size_hint=(0.7, 1))
+        function_input_green = TextInput(text='', multiline=False, size_hint=(0.7, 1))
+        function_input_blue = TextInput(text='', multiline=False, size_hint=(0.7, 1))
+
+        btn_clear = Button(text='Clean',
+                            on_press=partial(self.function_input_clear), size_hint=(0.1, 1))
+        btn_clear_red = Button(text='Clean Red',
+                            on_press=partial(self.function_input_clear), size_hint=(0.1, 1))
+        btn_clear_green = Button(text='Clean Green',
+                            on_press=partial(self.function_input_clear), size_hint=(0.1, 1))
+        btn_clear_blue = Button(text='Clean Blue',
+                            on_press=partial(self.function_input_clear), size_hint=(0.1, 1))
+        # btn_all = ToggleButton(text='All', group='type',state='down',
+        #     on_press=partial(self.onPressToggle), size_hint=(0.05, 1))
+        # btn_red = ToggleButton(text='Red', group='type',
+        #     on_press=partial(self.onPressToggle), size_hint=(0.05, 1))
+        # btn_green = ToggleButton(text='Green', group='type',
+        #     on_press=partial(self.onPressToggle), size_hint=(0.05, 1))
+        # btn_blue = ToggleButton(text='Blue', group='type',
+        #     on_press=partial(self.onPressToggle), size_hint=(0.05, 1))
+        # self.toggle_type = btn_all.text
         function_layout = BoxLayout(size_hint=(1, None), height=30)
         function_layout.add_widget(function_label)
         function_layout.add_widget(function_input)
-        function_layout.add_widget(btn_all)
-        function_layout.add_widget(btn_red)
-        function_layout.add_widget(btn_green)
-        function_layout.add_widget(btn_blue)
+        function_layout.add_widget(btn_clear)
+
+        function_layout_red = BoxLayout(size_hint=(1, None), height=30)
+        function_layout_red.add_widget(function_label_red)
+        function_layout_red.add_widget(function_input_red)
+        function_layout_red.add_widget(btn_clear_red)
+
+        function_layout_green = BoxLayout(size_hint=(1, None), height=30)
+        function_layout_green.add_widget(function_label_green)
+        function_layout_green.add_widget(function_input_green)
+        function_layout_green.add_widget(btn_clear_green)
+
+        function_layout_blue = BoxLayout(size_hint=(1, None), height=30)
+        function_layout_blue.add_widget(function_label_blue)
+        function_layout_blue.add_widget(function_input_blue)
+        function_layout_blue.add_widget(btn_clear_blue)
 
         graph_layout = BoxLayout()
 
@@ -700,13 +787,27 @@ class LUTtoolsApp(App):
         adjust_btn_layout = BoxLayout(size_hint=(1, None), height=50)
         btn_show_curve = Button(text='Show Curve',
                             on_press=partial(self.show_curve, graph, function_input))
+
+        btn_adjust_image = Button(text='Show Image',
+                            on_press=partial(self.show_adjust_image, adjust_wid, function_input))
+
+        btn_preview_adjust = Button(text='Preview Adjust',
+                            on_press=partial(self.preview_adjust, adjust_wid, function_input,
+                            function_input_red, function_input_green, function_input_blue))
+
         btn_apply_adjust = Button(text='Apply Adjust',
-                            on_press=partial(self.apply_adjust, function_input))
+                            on_press=partial(self.apply_adjust, function_input,
+                            function_input_red, function_input_green, function_input_blue))
         adjust_btn_layout.add_widget(btn_show_curve)
+        adjust_btn_layout.add_widget(btn_adjust_image)
+        adjust_btn_layout.add_widget(btn_preview_adjust)
         adjust_btn_layout.add_widget(btn_apply_adjust)
 
         adjust_layout = BoxLayout(orientation='vertical')
         adjust_layout.add_widget(function_layout)
+        adjust_layout.add_widget(function_layout_red)
+        adjust_layout.add_widget(function_layout_green)
+        adjust_layout.add_widget(function_layout_blue)
         adjust_layout.add_widget(graph_layout)
         adjust_layout.add_widget(adjust_btn_layout)
         th_adjusttab_head.content = adjust_layout
