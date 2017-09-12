@@ -4,7 +4,7 @@ from kivy.uix.label import Label
 from kivy.uix.slider import Slider
 from kivy.uix.boxlayout import BoxLayout
 from kivy.app import App
-from kivy.graphics import Color, Rectangle
+from kivy.graphics import Color, Rectangle, Line
 from random import random as r
 from functools import partial
 from kivy.uix.floatlayout import FloatLayout
@@ -96,7 +96,7 @@ class Draw3DSurface(object):
             plt.show()
 
 
-    def plot(self, Z1, Z2):
+    def plot(self, Z1, Z2, cx_axis, cy_axis):
         if Z1 is not None and Z2 is not None:
             fig = plt.figure(figsize=plt.figaspect(0.8))
             for index, color in enumerate(AxisList):
@@ -105,9 +105,9 @@ class Draw3DSurface(object):
                 cset = ax.contour(self.X, self.Y, Z1[:,:,index], zdir='z', cmap=cm.coolwarm)
                 cset = ax.contour(self.X, self.Y, Z1[:,:,index], zdir='x', cmap=cm.coolwarm)
                 cset = ax.contour(self.X, self.Y, Z1[:,:,index], zdir='y', cmap=cm.coolwarm)
-                ax.set_xlabel('X')
+                ax.set_xlabel(AxisList[cx_axis])
                 ax.set_xlim(0, 1)
-                ax.set_ylabel('Y')
+                ax.set_ylabel(AxisList[cy_axis])
                 ax.set_ylim(0, 1)
                 ax.set_zlabel(color)
                 ax.set_zlim(0, 1)
@@ -117,9 +117,9 @@ class Draw3DSurface(object):
                 cset = ax.contour(self.X, self.Y, Z2[:,:,index], zdir='z', cmap=cm.coolwarm)
                 cset = ax.contour(self.X, self.Y, Z2[:,:,index], zdir='x', cmap=cm.coolwarm)
                 cset = ax.contour(self.X, self.Y, Z2[:,:,index], zdir='y', cmap=cm.coolwarm)
-                ax.set_xlabel('X')
+                ax.set_xlabel(AxisList[cx_axis])
                 ax.set_xlim(0, 1)
-                ax.set_ylabel('Y')
+                ax.set_ylabel(AxisList[cy_axis])
                 ax.set_ylim(0, 1)
                 ax.set_zlabel(color)
                 ax.set_zlim(0, 1)
@@ -133,9 +133,9 @@ class Draw3DSurface(object):
                 cset = ax.contour(self.X, self.Y, Z1[:,:,index], zdir='z', cmap=cm.coolwarm)
                 cset = ax.contour(self.X, self.Y, Z1[:,:,index], zdir='x', cmap=cm.coolwarm)
                 cset = ax.contour(self.X, self.Y, Z1[:,:,index], zdir='y', cmap=cm.coolwarm)
-                ax.set_xlabel('X')
+                ax.set_xlabel(AxisList[cx_axis])
                 ax.set_xlim(0, 1)
-                ax.set_ylabel('Y')
+                ax.set_ylabel(AxisList[cy_axis])
                 ax.set_ylim(0, 1)
                 ax.set_zlabel(color)
                 ax.set_zlim(0, 1)
@@ -148,9 +148,9 @@ class Draw3DSurface(object):
                 cset = ax.contour(self.X, self.Y, Z2[:,:,index], zdir='z', cmap=cm.coolwarm)
                 cset = ax.contour(self.X, self.Y, Z2[:,:,index], zdir='x', cmap=cm.coolwarm)
                 cset = ax.contour(self.X, self.Y, Z2[:,:,index], zdir='y', cmap=cm.coolwarm)
-                ax.set_xlabel('X')
+                ax.set_xlabel(AxisList[cx_axis])
                 ax.set_xlim(0, 1)
-                ax.set_ylabel('Y')
+                ax.set_ylabel(AxisList[cy_axis])
                 ax.set_ylim(0, 1)
                 ax.set_zlabel(color)
                 ax.set_zlim(0, 1)
@@ -411,6 +411,54 @@ class LUTtoolsApp(App):
                 Rectangle(pos=(r() * wid.width + wid.x,
                                r() * wid.height + wid.y), size=(20, 20))
 
+    def get_color_axis(self, axis):
+        if axis == 0:
+            return 2,1
+        elif axis == 1:
+            return 2,0
+        else:
+            return 1,0
+
+    def show_lut_layer_arch(self, wid, *largs):
+        with wid.canvas:
+            wid.canvas.clear()
+            if self.fileroot.lut_data1.is_empty() == False and self.fileroot.lut_data2.is_empty() == True:
+                # self.update_edit_panel()
+                lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
+                c_x, c_y = self.get_color_axis(self.axis)
+                for x in range(32):
+                    for y in range(32):
+                        Color(lut_layer[x,y,0], lut_layer[x,y,1], lut_layer[x,y,2])
+                        Line(points=[wid.x + lut_layer[x,y,c_x] * wid.width, wid.y + lut_layer[x,y,c_y] * wid.height, \
+                                     wid.x + lut_layer[x+1,y,c_x] * wid.width, wid.y + lut_layer[x+1,y,c_y] * wid.height, \
+                                     wid.x + lut_layer[x+1,y+1,c_x] * wid.width, wid.y + lut_layer[x+1,y+1,c_y] * wid.height, \
+                                     wid.x + lut_layer[x,y+1,c_x] * wid.width, wid.y + lut_layer[x,y+1,c_y] * wid.height],
+                                     width = 3, close = True)
+
+            if self.fileroot.lut_data1.is_empty() == False and self.fileroot.lut_data2.is_empty() == False:
+
+                lut_layer = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
+                c_x, c_y = self.get_color_axis(self.axis)
+                for x in range(32):
+                    for y in range(32):
+                        Color(lut_layer[x,y,0], lut_layer[x,y,1], lut_layer[x,y,2])
+                        Line(points=[wid.x + lut_layer[x,y,c_x] * wid.width * 0.5, wid.y + lut_layer[x,y,c_y] * wid.height, \
+                                     wid.x + lut_layer[x+1,y,c_x] * wid.width * 0.5, wid.y + lut_layer[x+1,y,c_y] * wid.height, \
+                                     wid.x + lut_layer[x+1,y+1,c_x] * wid.width * 0.5, wid.y + lut_layer[x+1,y+1,c_y] * wid.height, \
+                                     wid.x + lut_layer[x,y+1,c_x] * wid.width * 0.5, wid.y + lut_layer[x,y+1,c_y] * wid.height],
+                                     width = 3, close = True)
+                lut_layer = self.fileroot.lut_data2.get_lut_layer(self.axis, self.layer_index)
+                # print lut_layer.shape
+                for x in range(32):
+                    for y in range(32):
+                        Color(lut_layer[x,y,0], lut_layer[x,y,1], lut_layer[x,y,2])
+                        Line(points=[wid.x + 15 + wid.width * 0.5 + lut_layer[x,y,c_x] * wid.width * 0.5, wid.y + lut_layer[x,y,c_y] * wid.height, \
+                                     wid.x + 15 + wid.width * 0.5 + lut_layer[x+1,y,c_x] * wid.width * 0.5, wid.y + lut_layer[x+1,y,c_y] * wid.height, \
+                                     wid.x + 15 + wid.width * 0.5 + lut_layer[x+1,y+1,c_x] * wid.width * 0.5, wid.y + lut_layer[x+1,y+1,c_y] * wid.height, \
+                                     wid.x + 15 + wid.width * 0.5 + lut_layer[x,y+1,c_x] * wid.width * 0.5, wid.y + lut_layer[x,y+1,c_y] * wid.height],
+                                     width = 3, close = True)
+
+
     def show_lut_layer(self, wid, *largs):
         # self.show_lut_arch()
         with wid.canvas:
@@ -530,12 +578,14 @@ class LUTtoolsApp(App):
         # if (self.axis == self.slider_axis):
         #     self.slider_axis = (self.slider_axis + 1) % len(AxisList)
         self.update_label()
-        self.show_lut_layer(wid)
+        # self.show_lut_layer(wid)
+        self.show_lut_layer_arch(wid)
 
     def show_3D_plot(self, wid, *largs):
         lut_layer_1 = None
         lut_layer_2 = None
         plot_type = 0
+        cx, xy = self.get_color_axis(self.axis)
         if self.fileroot.lut_data1.is_empty() != True:
             lut_layer_1 = self.fileroot.lut_data1.get_lut_layer(self.axis, self.layer_index)
             plot_type |= 0b01
@@ -546,11 +596,11 @@ class LUTtoolsApp(App):
         if plot_type == 0:
             pass
         elif plot_type == 1:
-            self.plot3d.plot(lut_layer_1 + 1.0e-10, None)
+            self.plot3d.plot(lut_layer_1 + 1.0e-10, None, cx, xy)
         elif plot_type == 2:
-            self.plot3d.plot(None, lut_layer_2 + 1.0e-10)
+            self.plot3d.plot(None, lut_layer_2 + 1.0e-10, cx, xy)
         elif plot_type == 3:
-            self.plot3d.plot(lut_layer_1 + 1.0e-10, lut_layer_2 + 1.0e-10)
+            self.plot3d.plot(lut_layer_1 + 1.0e-10, lut_layer_2 + 1.0e-10, cx, xy)
 
     def show_lut_arch(self):
         lut_layer_1 = None
@@ -577,7 +627,8 @@ class LUTtoolsApp(App):
         # self.label.text = pattern.format(AxisList[self.axis], value)
         self.layer_index = int(value)
         self.update_label()
-        self.show_lut_layer(wid)
+        # self.show_lut_layer(wid)
+        self.show_lut_layer_arch(wid)
         # self.update_edit_panel()
 
     def onslidervaluechange(self, c_wid, instance, value):
@@ -737,7 +788,7 @@ class LUTtoolsApp(App):
                             on_press=partial(self.load_lut, wid, 2))
 
         btn_showlayer = Button(text='Show LUT Layer',
-                            on_press=partial(self.show_lut_layer, wid))
+                            on_press=partial(self.show_lut_layer_arch, wid))
 
         btn_showplot = Button(text='Show 3D Plot',
                             on_press=partial(self.show_3D_plot, wid))
