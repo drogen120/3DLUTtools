@@ -35,6 +35,7 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from math import sin
 from utils import NumericStringParser
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
 
 AxisList = ["Red", "Green", "Blue"]
 # AxisList = ["Blue", "Green", "Red"] #Because of the reshape, the axis is different from lut doc
@@ -51,63 +52,109 @@ class Draw3DSurface(object):
         self.X = np.arange(0, 1, step)
         self.Y = np.arange(0, 1, step)
         self.X, self.Y = np.meshgrid(self.X, self.Y)
-    def plot(self, Z1, Z2, plot_axis):
-        if Z1 is not None and Z2 is not None:
-            fig = plt.figure(figsize=plt.figaspect(0.5))
-            ax = fig.add_subplot(1, 2, 1, projection='3d')
-            ax.plot_surface(self.X, self.Y, Z1, rstride=1, cstride=1, alpha=0.3)
-            cset = ax.contour(self.X, self.Y, Z1, zdir='z', cmap=cm.coolwarm)
-            cset = ax.contour(self.X, self.Y, Z1, zdir='x', cmap=cm.coolwarm)
-            cset = ax.contour(self.X, self.Y, Z1, zdir='y', cmap=cm.coolwarm)
-            ax.set_xlabel('X')
-            ax.set_xlim(0, 1)
-            ax.set_ylabel('Y')
-            ax.set_ylim(0, 1)
-            ax.set_zlabel(plot_axis)
-            ax.set_zlim(0, 1)
 
-            ax = fig.add_subplot(1, 2, 2, projection='3d')
-            ax.plot_surface(self.X, self.Y, Z2, rstride=1, cstride=1, alpha=0.3)
-            cset = ax.contour(self.X, self.Y, Z2, zdir='z', cmap=cm.coolwarm)
-            cset = ax.contour(self.X, self.Y, Z2, zdir='x', cmap=cm.coolwarm)
-            cset = ax.contour(self.X, self.Y, Z2, zdir='y', cmap=cm.coolwarm)
-            ax.set_xlabel('X')
-            ax.set_xlim(0, 1)
-            ax.set_ylabel('Y')
-            ax.set_ylim(0, 1)
-            ax.set_zlabel(plot_axis)
-            ax.set_zlim(0, 1)
+    def plot_lut(self, lut1, lut2):
+        Z = np.zeros((8,3))
+        if lut1 is not None and lut2 is not None:
+            pass
+        elif lut1 is not None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            r = [0,2]
+            X, Y = np.meshgrid(r, r)
+
+            for i in range(32):
+                Z[0] = lut1[i,i,i,:]
+                Z[1] = lut1[i+1,i,i,:]
+                Z[2] = lut1[i+1,i+1,i,:]
+                Z[3] = lut1[i,i+1,i,:]
+                Z[4] = lut1[i,i,i+1,:]
+                Z[5] = lut1[i+1,i,i+1,:]
+                Z[6] = lut1[i+1,i+1,i+1,:]
+                Z[7] = lut1[i,i+1,i+1,:]
+
+                # list of sides' polygons of figure
+                verts = [[Z[0],Z[1],Z[2],Z[3]],
+                 [Z[4],Z[5],Z[6],Z[7]],
+                 [Z[0],Z[1],Z[5],Z[4]],
+                 [Z[2],Z[3],Z[7],Z[6]],
+                 [Z[1],Z[2],Z[6],Z[5]],
+                 [Z[4],Z[7],Z[3],Z[0]],
+                 [Z[2],Z[3],Z[7],Z[6]]]
+
+                # plot vertices
+                ax.scatter3D(Z[:, 0], Z[:, 1], Z[:, 2])
+
+                # plot sides
+                ax.add_collection3d(Poly3DCollection(verts,
+                 facecolors='cyan', linewidths=1, edgecolors='r', alpha=.25))
+
+            ax.set_xlabel('Red')
+            ax.set_ylabel('Green')
+            ax.set_zlabel('Blue')
+
+            plt.show()
+
+
+    def plot(self, Z1, Z2):
+        if Z1 is not None and Z2 is not None:
+            fig = plt.figure(figsize=plt.figaspect(0.8))
+            for index, color in enumerate(AxisList):
+                ax = fig.add_subplot(3, 2, 2*index+1, projection='3d')
+                ax.plot_surface(self.X, self.Y, Z1[:,:,index], rstride=1, cstride=1, alpha=0.3)
+                cset = ax.contour(self.X, self.Y, Z1[:,:,index], zdir='z', cmap=cm.coolwarm)
+                cset = ax.contour(self.X, self.Y, Z1[:,:,index], zdir='x', cmap=cm.coolwarm)
+                cset = ax.contour(self.X, self.Y, Z1[:,:,index], zdir='y', cmap=cm.coolwarm)
+                ax.set_xlabel('X')
+                ax.set_xlim(0, 1)
+                ax.set_ylabel('Y')
+                ax.set_ylim(0, 1)
+                ax.set_zlabel(color)
+                ax.set_zlim(0, 1)
+
+                ax = fig.add_subplot(3, 2, 2*index+2, projection='3d')
+                ax.plot_surface(self.X, self.Y, Z2[:,:,index], rstride=1, cstride=1, alpha=0.3)
+                cset = ax.contour(self.X, self.Y, Z2[:,:,index], zdir='z', cmap=cm.coolwarm)
+                cset = ax.contour(self.X, self.Y, Z2[:,:,index], zdir='x', cmap=cm.coolwarm)
+                cset = ax.contour(self.X, self.Y, Z2[:,:,index], zdir='y', cmap=cm.coolwarm)
+                ax.set_xlabel('X')
+                ax.set_xlim(0, 1)
+                ax.set_ylabel('Y')
+                ax.set_ylim(0, 1)
+                ax.set_zlabel(color)
+                ax.set_zlim(0, 1)
 
             plt.show()
         elif Z1 is not None:
-            fig = plt.figure()
-            ax = fig.gca(projection='3d')
-            ax.plot_surface(self.X, self.Y, Z1, rstride=1, cstride=1, alpha=0.3)
-            cset = ax.contour(self.X, self.Y, Z1, zdir='z', cmap=cm.coolwarm)
-            cset = ax.contour(self.X, self.Y, Z1, zdir='x', cmap=cm.coolwarm)
-            cset = ax.contour(self.X, self.Y, Z1, zdir='y', cmap=cm.coolwarm)
-            ax.set_xlabel('X')
-            ax.set_xlim(0, 1)
-            ax.set_ylabel('Y')
-            ax.set_ylim(0, 1)
-            ax.set_zlabel(plot_axis)
-            ax.set_zlim(0, 1)
+            fig = plt.figure(figsize=plt.figaspect(3))
+            for index, color in enumerate(AxisList):
+                ax = fig.add_subplot(3, 1, index+1, projection='3d')
+                ax.plot_surface(self.X, self.Y, Z1[:,:,index], rstride=1, cstride=1, alpha=0.3)
+                cset = ax.contour(self.X, self.Y, Z1[:,:,index], zdir='z', cmap=cm.coolwarm)
+                cset = ax.contour(self.X, self.Y, Z1[:,:,index], zdir='x', cmap=cm.coolwarm)
+                cset = ax.contour(self.X, self.Y, Z1[:,:,index], zdir='y', cmap=cm.coolwarm)
+                ax.set_xlabel('X')
+                ax.set_xlim(0, 1)
+                ax.set_ylabel('Y')
+                ax.set_ylim(0, 1)
+                ax.set_zlabel(color)
+                ax.set_zlim(0, 1)
             plt.show()
         elif Z2 is not None:
-            fig = plt.figure()
-            ax = fig.gca(projection='3d')
-            ax.plot_surface(self.X, self.Y, Z2, rstride=1, cstride=1, alpha=0.3)
-            cset = ax.contour(self.X, self.Y, Z2, zdir='z', cmap=cm.coolwarm)
-            cset = ax.contour(self.X, self.Y, Z2, zdir='x', cmap=cm.coolwarm)
-            cset = ax.contour(self.X, self.Y, Z2, zdir='y', cmap=cm.coolwarm)
-            ax.set_xlabel('X')
-            ax.set_xlim(0, 1)
-            ax.set_ylabel('Y')
-            ax.set_ylim(0, 1)
-            ax.set_zlabel(plot_axis)
-            ax.set_zlim(0, 1)
+            fig = plt.figure(figsize=plt.figaspect(3))
+            for index, color in enumerate(AxisList):
+                ax = fig.add_subplot(3, 1, index+1, projection='3d')
+                ax.plot_surface(self.X, self.Y, Z2[:,:,index], rstride=1, cstride=1, alpha=0.3)
+                cset = ax.contour(self.X, self.Y, Z2[:,:,index], zdir='z', cmap=cm.coolwarm)
+                cset = ax.contour(self.X, self.Y, Z2[:,:,index], zdir='x', cmap=cm.coolwarm)
+                cset = ax.contour(self.X, self.Y, Z2[:,:,index], zdir='y', cmap=cm.coolwarm)
+                ax.set_xlabel('X')
+                ax.set_xlim(0, 1)
+                ax.set_ylabel('Y')
+                ax.set_ylim(0, 1)
+                ax.set_zlabel(color)
+                ax.set_zlim(0, 1)
             plt.show()
-
 
 class LoadDialog(FloatLayout):
     load = ObjectProperty(None)
@@ -365,6 +412,7 @@ class LUTtoolsApp(App):
                                r() * wid.height + wid.y), size=(20, 20))
 
     def show_lut_layer(self, wid, *largs):
+        # self.show_lut_arch()
         with wid.canvas:
             wid.canvas.clear()
             if self.fileroot.lut_data1.is_empty() == False and self.fileroot.lut_data2.is_empty() == True:
@@ -494,26 +542,36 @@ class LUTtoolsApp(App):
         if self.fileroot.lut_data2.is_empty() != True:
             lut_layer_2 = self.fileroot.lut_data2.get_lut_layer(self.axis, self.layer_index)
             plot_type |= 0b10
-        for key, value in AxisPlotDic.iteritems():
-            if key != AxisList[self.axis]:
-                if plot_type == 0:
-                    pass
-                elif plot_type == 1:
-                    self.plot3d.plot(lut_layer_1[:,:,value], None, key)
-                elif plot_type == 2:
-                    self.plot3d.plot(None, lut_layer_2[:,:,value], key)
-                elif plot_type == 3:
-                    self.plot3d.plot(lut_layer_1[:,:,value], lut_layer_2[:,:,value], key)
-                # self.plot3d.plot(lut_layer[:,:,value], key)
-            else:
-                if plot_type == 0:
-                    pass
-                elif plot_type == 1:
-                    self.plot3d.plot(lut_layer_1[:,:,value] + 1.0e-10, None, key)
-                elif plot_type == 2:
-                    self.plot3d.plot(None, lut_layer_2[:,:,value] + 1.0e-10, key)
-                elif plot_type == 3:
-                    self.plot3d.plot(lut_layer_1[:,:,value] + 1.0e-10, lut_layer_2[:,:,value] + 1.0e-10, key)
+
+        if plot_type == 0:
+            pass
+        elif plot_type == 1:
+            self.plot3d.plot(lut_layer_1 + 1.0e-10, None)
+        elif plot_type == 2:
+            self.plot3d.plot(None, lut_layer_2 + 1.0e-10)
+        elif plot_type == 3:
+            self.plot3d.plot(lut_layer_1 + 1.0e-10, lut_layer_2 + 1.0e-10)
+
+    def show_lut_arch(self):
+        lut_layer_1 = None
+        lut_layer_2 = None
+        plot_type = 0
+        if self.fileroot.lut_data1.is_empty() != True:
+            lut_layer_1 = self.fileroot.lut_data1.get_lut()
+            plot_type |= 0b01
+        if self.fileroot.lut_data2.is_empty() != True:
+            lut_layer_2 = self.fileroot.lut_data2.get_lut()
+            plot_type |= 0b10
+
+        if plot_type == 0:
+            pass
+        elif plot_type == 1:
+            self.plot3d.plot_lut(lut_layer_1, None)
+        elif plot_type == 2:
+            self.plot3d.plot_lut(None, lut_layer_2)
+        elif plot_type == 3:
+            self.plot3d.plot_lut(lut_layer_1, lut_layer_2)
+
 
     def onlutlayerchange(self, wid, instance, value):
         # self.label.text = pattern.format(AxisList[self.axis], value)
