@@ -53,6 +53,47 @@ class Draw3DSurface(object):
         self.Y = np.arange(0, 1, step)
         self.X, self.Y = np.meshgrid(self.X, self.Y)
 
+    # def plot_lut(self, lut1, lut2):
+    #     Z = np.zeros((8,3))
+    #     if lut1 is not None and lut2 is not None:
+    #         pass
+    #     elif lut1 is not None:
+    #         fig = plt.figure()
+    #         ax = fig.add_subplot(111, projection='3d')
+    #         r = [0,2]
+    #         X, Y = np.meshgrid(r, r)
+    #
+    #         for i in range(32):
+    #             Z[0] = lut1[i,i,i,:]
+    #             Z[1] = lut1[i+1,i,i,:]
+    #             Z[2] = lut1[i+1,i+1,i,:]
+    #             Z[3] = lut1[i,i+1,i,:]
+    #             Z[4] = lut1[i,i,i+1,:]
+    #             Z[5] = lut1[i+1,i,i+1,:]
+    #             Z[6] = lut1[i+1,i+1,i+1,:]
+    #             Z[7] = lut1[i,i+1,i+1,:]
+    #
+    #             # list of sides' polygons of figure
+    #             verts = [[Z[0],Z[1],Z[2],Z[3]],
+    #              [Z[4],Z[5],Z[6],Z[7]],
+    #              [Z[0],Z[1],Z[5],Z[4]],
+    #              [Z[2],Z[3],Z[7],Z[6]],
+    #              [Z[1],Z[2],Z[6],Z[5]],
+    #              [Z[4],Z[7],Z[3],Z[0]],
+    #              [Z[2],Z[3],Z[7],Z[6]]]
+    #
+    #             # plot vertices
+    #             ax.scatter3D(Z[:, 0], Z[:, 1], Z[:, 2])
+    #
+    #             # plot sides
+    #             ax.add_collection3d(Poly3DCollection(verts,
+    #              facecolors='cyan', linewidths=1, edgecolors='r', alpha=.25))
+    #
+    #         ax.set_xlabel('Red')
+    #         ax.set_ylabel('Green')
+    #         ax.set_zlabel('Blue')
+    #
+    #         plt.show()
     def plot_lut(self, lut1, lut2):
         Z = np.zeros((8,3))
         if lut1 is not None and lut2 is not None:
@@ -62,38 +103,40 @@ class Draw3DSurface(object):
             ax = fig.add_subplot(111, projection='3d')
             r = [0,2]
             X, Y = np.meshgrid(r, r)
+            plt.ion()
+            plt.show()
 
-            for i in range(32):
-                Z[0] = lut1[i,i,i,:]
-                Z[1] = lut1[i+1,i,i,:]
-                Z[2] = lut1[i+1,i+1,i,:]
-                Z[3] = lut1[i,i+1,i,:]
-                Z[4] = lut1[i,i,i+1,:]
-                Z[5] = lut1[i+1,i,i+1,:]
-                Z[6] = lut1[i+1,i+1,i+1,:]
-                Z[7] = lut1[i,i+1,i+1,:]
+            Z[0] = lut1[0,0,0,:]
+            Z[1] = lut1[32,0,0,:]
+            Z[2] = lut1[32,32,0,:]
+            Z[3] = lut1[0,32,0,:]
+            Z[4] = lut1[0,0,32,:]
+            Z[5] = lut1[32,0,32,:]
+            Z[6] = lut1[32,32,32,:]
+            Z[7] = lut1[0,32,32,:]
 
-                # list of sides' polygons of figure
-                verts = [[Z[0],Z[1],Z[2],Z[3]],
-                 [Z[4],Z[5],Z[6],Z[7]],
-                 [Z[0],Z[1],Z[5],Z[4]],
-                 [Z[2],Z[3],Z[7],Z[6]],
-                 [Z[1],Z[2],Z[6],Z[5]],
-                 [Z[4],Z[7],Z[3],Z[0]],
-                 [Z[2],Z[3],Z[7],Z[6]]]
+            # list of sides' polygons of figure
+            verts = [[Z[0],Z[1],Z[2],Z[3]],
+             [Z[4],Z[5],Z[6],Z[7]],
+             [Z[0],Z[1],Z[5],Z[4]],
+             [Z[2],Z[3],Z[7],Z[6]],
+             [Z[1],Z[2],Z[6],Z[5]],
+             [Z[4],Z[7],Z[3],Z[0]],
+             [Z[2],Z[3],Z[7],Z[6]]]
 
-                # plot vertices
-                ax.scatter3D(Z[:, 0], Z[:, 1], Z[:, 2])
+            # plot vertices
+            ax.scatter3D(Z[:, 0], Z[:, 1], Z[:, 2])
 
-                # plot sides
-                ax.add_collection3d(Poly3DCollection(verts,
-                 facecolors='cyan', linewidths=1, edgecolors='r', alpha=.25))
+            # plot sides
+            ax.add_collection3d(Poly3DCollection(verts,
+             facecolors='cyan', linewidths=1, edgecolors='r', alpha=.25))
 
             ax.set_xlabel('Red')
             ax.set_ylabel('Green')
             ax.set_zlabel('Blue')
 
-            plt.show()
+            plt.draw()
+            plt.pause(0.001)
 
 
     def plot(self, Z1, Z2, cx_axis, cy_axis):
@@ -419,7 +462,9 @@ class LUTtoolsApp(App):
         else:
             return 1,0
 
-    def show_lut_layer_arch(self, wid, *largs):
+    def show_lut_layer_arch(self, wid, instance, *largs):
+        if type(instance) == Button:
+            self.show_lut_arch()
         with wid.canvas:
             wid.canvas.clear()
             if self.fileroot.lut_data1.is_empty() == False and self.fileroot.lut_data2.is_empty() == True:
@@ -459,7 +504,8 @@ class LUTtoolsApp(App):
                                      width = 3, close = True)
 
 
-    def show_lut_layer(self, wid, *largs):
+    def show_lut_layer(self, wid, instance,*largs):
+        # print instance
         # self.show_lut_arch()
         with wid.canvas:
             wid.canvas.clear()
@@ -573,13 +619,13 @@ class LUTtoolsApp(App):
     def save_lut(self, wid, *largs):
         self.fileroot.show_save()
 
-    def change_axis(self, wid, *largs):
+    def change_axis(self, wid, instance, *largs):
         self.axis = (self.axis + 1) % len(AxisList)
         # if (self.axis == self.slider_axis):
         #     self.slider_axis = (self.slider_axis + 1) % len(AxisList)
         self.update_label()
         # self.show_lut_layer(wid)
-        self.show_lut_layer_arch(wid)
+        self.show_lut_layer_arch(wid, instance)
 
     def show_3D_plot(self, wid, *largs):
         lut_layer_1 = None
@@ -628,7 +674,7 @@ class LUTtoolsApp(App):
         self.layer_index = int(value)
         self.update_label()
         # self.show_lut_layer(wid)
-        self.show_lut_layer_arch(wid)
+        self.show_lut_layer_arch(wid, instance)
         # self.update_edit_panel()
 
     def onslidervaluechange(self, c_wid, instance, value):
