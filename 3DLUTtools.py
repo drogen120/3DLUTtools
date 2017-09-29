@@ -103,8 +103,8 @@ class Draw3DSurface(object):
             ax = fig.add_subplot(111, projection='3d')
             r = [0,2]
             X, Y = np.meshgrid(r, r)
-            plt.ion()
-            plt.show()
+            # plt.ion()
+            # plt.show()
 
             Z[0] = lut1[0,0,0,:]
             Z[1] = lut1[32,0,0,:]
@@ -135,9 +135,9 @@ class Draw3DSurface(object):
             ax.set_ylabel('Green')
             ax.set_zlabel('Blue')
 
-            plt.draw()
-            plt.pause(0.001)
-
+            # plt.draw()
+            # plt.pause(0.001)
+            plt.show()
 
     def plot(self, Z1, Z2, cx_axis, cy_axis):
         if Z1 is not None and Z2 is not None:
@@ -624,8 +624,8 @@ class LUTtoolsApp(App):
         # if (self.axis == self.slider_axis):
         #     self.slider_axis = (self.slider_axis + 1) % len(AxisList)
         self.update_label()
-        # self.show_lut_layer(wid)
-        self.show_lut_layer_arch(wid, instance)
+        self.show_lut_layer(wid, instance)
+        # self.show_lut_layer_arch(wid, instance)
 
     def show_3D_plot(self, wid, *largs):
         lut_layer_1 = None
@@ -661,20 +661,20 @@ class LUTtoolsApp(App):
 
         if plot_type == 0:
             pass
-        elif plot_type == 1:
-            self.plot3d.plot_lut(lut_layer_1, None)
-        elif plot_type == 2:
-            self.plot3d.plot_lut(None, lut_layer_2)
-        elif plot_type == 3:
-            self.plot3d.plot_lut(lut_layer_1, lut_layer_2)
+        # elif plot_type == 1:
+        #     self.plot3d.plot_lut(lut_layer_1, None)
+        # elif plot_type == 2:
+        #     self.plot3d.plot_lut(None, lut_layer_2)
+        # elif plot_type == 3:
+        #     self.plot3d.plot_lut(lut_layer_1, lut_layer_2)
 
 
     def onlutlayerchange(self, wid, instance, value):
         # self.label.text = pattern.format(AxisList[self.axis], value)
         self.layer_index = int(value)
         self.update_label()
-        # self.show_lut_layer(wid)
-        self.show_lut_layer_arch(wid, instance)
+        self.show_lut_layer(wid, instance)
+        # self.show_lut_layer_arch(wid, instance)
         # self.update_edit_panel()
 
     def onslidervaluechange(self, c_wid, instance, value):
@@ -834,7 +834,7 @@ class LUTtoolsApp(App):
                             on_press=partial(self.load_lut, wid, 2))
 
         btn_showlayer = Button(text='Show LUT Layer',
-                            on_press=partial(self.show_lut_layer_arch, wid))
+                            on_press=partial(self.show_lut_layer, wid))
 
         btn_showplot = Button(text='Show 3D Plot',
                             on_press=partial(self.show_3D_plot, wid))
@@ -993,29 +993,29 @@ class LUTtoolsApp(App):
         tp.add_widget(th_adjusttab_head)
 
         #Preview tab define
-        th_previewimg_head = TabbedPanelHeader(text='Preview')
-        images_layout = BoxLayout(orientation='vertical')
-        img_wid = Widget(size_hint=(1, 0.9))
-        button_layout = BoxLayout(size_hint=(1, None), height=50)
-        # img_array = cv2.imread('./img/wql_result.jpeg')
-
-        btn_show_img = Button(text='Show Image',
-                            on_press=partial(self.show_pre_image, img_wid))
-        btn_apply_lut = Button(text='Apply LUT',
-                            on_press=partial(self.onApplyLUTClick, img_wid))
-
-        button_layout.add_widget(btn_show_img)
-        button_layout.add_widget(btn_apply_lut)
-
-
-        # th_previewimg_head.bind(on_press=partial(self.imgpreview_press_callback, img_wid, img_array))
-
-        self.pb = ProgressBar(max=1000,size_hint=(1, 0.05))
-        images_layout.add_widget(self.pb)
-        images_layout.add_widget(img_wid)
-        images_layout.add_widget(button_layout)
-        th_previewimg_head.content = images_layout
-        tp.add_widget(th_previewimg_head)
+        # th_previewimg_head = TabbedPanelHeader(text='Preview')
+        # images_layout = BoxLayout(orientation='vertical')
+        # img_wid = Widget(size_hint=(1, 0.9))
+        # button_layout = BoxLayout(size_hint=(1, None), height=50)
+        # # img_array = cv2.imread('./img/wql_result.jpeg')
+        #
+        # btn_show_img = Button(text='Show Image',
+        #                     on_press=partial(self.show_pre_image, img_wid))
+        # btn_apply_lut = Button(text='Apply LUT',
+        #                     on_press=partial(self.onApplyLUTClick, img_wid))
+        #
+        # button_layout.add_widget(btn_show_img)
+        # button_layout.add_widget(btn_apply_lut)
+        #
+        #
+        # # th_previewimg_head.bind(on_press=partial(self.imgpreview_press_callback, img_wid, img_array))
+        #
+        # self.pb = ProgressBar(max=1000,size_hint=(1, 0.05))
+        # images_layout.add_widget(self.pb)
+        # images_layout.add_widget(img_wid)
+        # images_layout.add_widget(button_layout)
+        # th_previewimg_head.content = images_layout
+        # tp.add_widget(th_previewimg_head)
 
         return tp
 
